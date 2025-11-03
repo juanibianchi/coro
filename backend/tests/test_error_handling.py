@@ -1,7 +1,7 @@
 """Tests for error handling and robustness."""
 
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, AsyncMock
 from backend.services.gemini_service import GeminiService
 from backend.services.groq_service import GroqService
 from backend.services.deepseek_service import DeepSeekService
@@ -52,14 +52,11 @@ async def test_deepseek_service_handles_http_error():
     """Test that DeepSeekService handles HTTP errors gracefully."""
     service = DeepSeekService()
 
-    with patch('httpx.AsyncClient') as mock_client_class:
-        # Create async context manager mock
-        mock_client = Mock()
-        mock_client.post = Mock(side_effect=Exception("HTTP Error"))
-
-        # Make AsyncClient return an async context manager
-        mock_client_class.return_value.__aenter__.return_value = mock_client
-        mock_client_class.return_value.__aexit__.return_value = None
+    with patch('backend.services.deepseek_service.get_http_client') as mock_get_client:
+        # Create mock client with async post method
+        mock_client = AsyncMock()
+        mock_client.post = AsyncMock(side_effect=Exception("HTTP Error"))
+        mock_get_client.return_value = mock_client
 
         response = await service.generate("test prompt")
 

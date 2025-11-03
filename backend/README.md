@@ -37,6 +37,9 @@ cp .env.example .env
 # GEMINI_API_KEY=your_key_here
 # GROQ_API_KEY=your_key_here
 # DEEPSEEK_API_KEY=your_key_here
+# CORS_ALLOWED_ORIGINS=https://your-frontend.example
+# CORS_ALLOW_CREDENTIALS=true
+# CORO_API_TOKEN=optional_shared_secret
 ```
 
 ### 3. Run the Server
@@ -180,7 +183,7 @@ backend/
 
 1. Push code to GitHub
 2. Connect Railway to your repository
-3. Add environment variables in Railway dashboard
+3. Add environment variables in Railway dashboard (`GEMINI_API_KEY`, `GROQ_API_KEY`, `DEEPSEEK_API_KEY` optional, `CORS_ALLOWED_ORIGINS`, `CORS_ALLOW_CREDENTIALS`, optional `CORO_API_TOKEN`)
 4. Railway auto-detects Python and deploys
 5. Get your public URL
 
@@ -190,7 +193,7 @@ backend/
 2. Create Web Service in Render
 3. Build command: `pip install -r requirements.txt`
 4. Start command: `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
-5. Add environment variables
+5. Add environment variables (`GEMINI_API_KEY`, `GROQ_API_KEY`, `DEEPSEEK_API_KEY` optional, `CORS_ALLOWED_ORIGINS`, `CORS_ALLOW_CREDENTIALS`, optional `CORO_API_TOKEN`)
 6. Deploy
 
 ## Performance Targets

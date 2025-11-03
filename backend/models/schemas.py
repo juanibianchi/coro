@@ -4,6 +4,13 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, field_validator
 
 
+class Message(BaseModel):
+    """Individual message in a conversation."""
+
+    role: str = Field(..., description="Message role: 'user' or 'assistant'")
+    content: str = Field(..., min_length=1, description="Message content")
+
+
 class ChatRequest(BaseModel):
     """Request schema for chat endpoints."""
 
@@ -11,6 +18,10 @@ class ChatRequest(BaseModel):
     models: List[str] = Field(..., min_items=1, description="List of model IDs to query")
     temperature: float = Field(default=0.7, ge=0.0, le=1.0, description="Temperature for response generation")
     max_tokens: int = Field(default=512, ge=1, le=4096, description="Maximum number of tokens to generate")
+    conversation_history: Optional[dict[str, List[Message]]] = Field(
+        default=None,
+        description="Optional conversation history per model. Key is model ID, value is list of messages"
+    )
 
     @field_validator("models")
     @classmethod

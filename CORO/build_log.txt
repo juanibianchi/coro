@@ -1,0 +1,274 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project CORO.xcodeproj -scheme CORO -destination "platform=iOS Simulator,name=iPhone 15,OS=17.5" clean build
+
+--- xcodebuild: WARNING: Using the first of multiple matching destinations:
+{ platform:iOS Simulator, arch:arm64, id:8E4BCDC9-2AC9-43A9-B685-0B3F5C18603D, OS:17.5, name:iPhone 15 }
+{ platform:iOS Simulator, arch:x86_64, id:8E4BCDC9-2AC9-43A9-B685-0B3F5C18603D, OS:17.5, name:iPhone 15 }
+ComputePackagePrebuildTargetDependencyGraph
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+** CLEAN SUCCEEDED **
+
+--- xcodebuild: WARNING: Using the first of multiple matching destinations:
+{ platform:iOS Simulator, arch:arm64, id:8E4BCDC9-2AC9-43A9-B685-0B3F5C18603D, OS:17.5, name:iPhone 15 }
+{ platform:iOS Simulator, arch:x86_64, id:8E4BCDC9-2AC9-43A9-B685-0B3F5C18603D, OS:17.5, name:iPhone 15 }
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (1 target)
+    Target 'CORO' in project 'CORO' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.4.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --print-asset-tag-combinations --output-format xml1 /Users/juanignaciobianchi/devdev/coro/CORO/CORO/Assets.xcassets
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --version --output-format xml1
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+Build description signature: 8c49e5e1763d55b84da61ffe6a35d202
+Build description path: /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/XCBuildData/8c49e5e1763d55b84da61ffe6a35d202.xcbuilddata
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.4.sdk /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator18.4-22E235-71825a6d136aa4733edcbe86ece5525b.sdkstatcache
+    cd /Users/juanignaciobianchi/devdev/coro/CORO/CORO.xcodeproj
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.4.sdk -o /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator18.4-22E235-71825a6d136aa4733edcbe86ece5525b.sdkstatcache
+
+CreateBuildDirectory /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Products
+    cd /Users/juanignaciobianchi/devdev/coro/CORO/CORO.xcodeproj
+    builtin-create-build-directory /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Products
+
+CreateBuildDirectory /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex
+    cd /Users/juanignaciobianchi/devdev/coro/CORO/CORO.xcodeproj
+    builtin-create-build-directory /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex
+
+CreateBuildDirectory /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator
+    cd /Users/juanignaciobianchi/devdev/coro/CORO/CORO.xcodeproj
+    builtin-create-build-directory /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator
+
+CreateBuildDirectory /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Products/Debug-iphonesimulator
+    cd /Users/juanignaciobianchi/devdev/coro/CORO/CORO.xcodeproj
+    builtin-create-build-directory /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Products/Debug-iphonesimulator
+
+WriteAuxiliaryFile /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO-77c8f3e1e81937473d13b68d7e4f7d55-VFS-iphonesimulator/all-product-headers.yaml
+    cd /Users/juanignaciobianchi/devdev/coro/CORO/CORO.xcodeproj
+    write-file /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO-77c8f3e1e81937473d13b68d7e4f7d55-VFS-iphonesimulator/all-product-headers.yaml
+
+WriteAuxiliaryFile /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/empty-CORO.plist (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    write-file /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/empty-CORO.plist
+
+WriteAuxiliaryFile /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/Objects-normal/arm64/CORO.SwiftConstValuesFileList (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    write-file /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/Objects-normal/arm64/CORO.SwiftConstValuesFileList
+
+WriteAuxiliaryFile /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/Objects-normal/arm64/CORO.LinkFileList (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    write-file /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/Objects-normal/arm64/CORO.LinkFileList
+
+WriteAuxiliaryFile /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/Objects-normal/arm64/CORO_const_extract_protocols.json (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    write-file /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/Objects-normal/arm64/CORO_const_extract_protocols.json
+
+WriteAuxiliaryFile /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/Objects-normal/arm64/CORO.SwiftFileList (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    write-file /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/Objects-normal/arm64/CORO.SwiftFileList
+
+WriteAuxiliaryFile /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/Objects-normal/arm64/CORO-OutputFileMap.json (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    write-file /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/Objects-normal/arm64/CORO-OutputFileMap.json
+
+WriteAuxiliaryFile /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO.hmap (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    write-file /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO.hmap
+
+WriteAuxiliaryFile /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO.DependencyStaticMetadataFileList (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    write-file /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO.DependencyStaticMetadataFileList
+
+WriteAuxiliaryFile /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO.DependencyMetadataFileList (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    write-file /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO.DependencyMetadataFileList
+
+WriteAuxiliaryFile /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO-project-headers.hmap (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    write-file /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO-project-headers.hmap
+
+WriteAuxiliaryFile /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/DerivedSources/Entitlements-Simulated.plist (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    write-file /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/DerivedSources/Entitlements-Simulated.plist
+
+WriteAuxiliaryFile /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO-own-target-headers.hmap (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    write-file /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO-own-target-headers.hmap
+
+WriteAuxiliaryFile /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO-generated-files.hmap (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    write-file /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO-generated-files.hmap
+
+WriteAuxiliaryFile /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO-all-target-headers.hmap (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    write-file /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO-all-target-headers.hmap
+
+WriteAuxiliaryFile /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO-all-non-framework-target-headers.hmap (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    write-file /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO-all-non-framework-target-headers.hmap
+
+WriteAuxiliaryFile /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO-DebugDylibPath-normal-arm64.txt (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    write-file /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO-DebugDylibPath-normal-arm64.txt
+
+WriteAuxiliaryFile /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO-DebugDylibInstallName-normal-arm64.txt (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    write-file /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO-DebugDylibInstallName-normal-arm64.txt
+
+MkDir /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Products/Debug-iphonesimulator/CORO.app (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    /bin/mkdir -p /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Products/Debug-iphonesimulator/CORO.app
+
+ProcessProductPackaging "" /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO.app-Simulated.xcent (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    
+    Entitlements:
+    
+    {
+    "application-identifier" = "744PJ69QM4.doste.CORO";
+}
+    
+    builtin-productPackagingUtility -entitlements -format xml -o /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO.app-Simulated.xcent
+
+ProcessProductPackagingDER /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO.app-Simulated.xcent /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO.app-Simulated.xcent.der (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    /usr/bin/derq query -f xml -i /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO.app-Simulated.xcent -o /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO.app-Simulated.xcent.der --raw
+
+Ld /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Products/Debug-iphonesimulator/CORO.app/__preview.dylib normal (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios16.0-simulator -dynamiclib -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.4.sdk -O0 -L/Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Products/Debug-iphonesimulator -F/Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Products/Debug-iphonesimulator -install_name @rpath/CORO.debug.dylib -dead_strip -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -Xlinker -dependency_info -Xlinker /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/Objects-normal/arm64/CORO_dependency_info.dat -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __entitlements -Xlinker /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO.app-Simulated.xcent -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __ents_der -Xlinker /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO.app-Simulated.xcent.der -Xlinker -no_adhoc_codesign -o /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Products/Debug-iphonesimulator/CORO.app/__preview.dylib
+
+GenerateAssetSymbols /Users/juanignaciobianchi/devdev/coro/CORO/CORO/Assets.xcassets (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    /Applications/Xcode.app/Contents/Developer/usr/bin/actool /Users/juanignaciobianchi/devdev/coro/CORO/CORO/Assets.xcassets --compile /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Products/Debug-iphonesimulator/CORO.app --output-format human-readable-text --notices --warnings --export-dependency-info /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/assetcatalog_dependencies --output-partial-info-plist /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/assetcatalog_generated_info.plist --app-icon AppIcon --accent-color AccentColor --compress-pngs --enable-on-demand-resources YES --development-region en --target-device iphone --target-device ipad --minimum-deployment-target 16.0 --platform iphonesimulator --bundle-identifier doste.CORO --generate-swift-asset-symbols /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/DerivedSources/GeneratedAssetSymbols.swift --generate-objc-asset-symbols /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/DerivedSources/GeneratedAssetSymbols.h --generate-asset-symbol-index /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/DerivedSources/GeneratedAssetSymbols-Index.plist
+/* com.apple.actool.compilation-results */
+/Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/DerivedSources/GeneratedAssetSymbols-Index.plist
+/Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/DerivedSources/GeneratedAssetSymbols.h
+/Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/DerivedSources/GeneratedAssetSymbols.swift
+
+
+MkDir /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/assetcatalog_output/unthinned (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    /bin/mkdir -p /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/assetcatalog_output/unthinned
+
+MkDir /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/assetcatalog_output/thinned (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    /bin/mkdir -p /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/assetcatalog_output/thinned
+
+CompileAssetCatalogVariant thinned /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Products/Debug-iphonesimulator/CORO.app /Users/juanignaciobianchi/devdev/coro/CORO/CORO/Assets.xcassets (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    /Applications/Xcode.app/Contents/Developer/usr/bin/actool /Users/juanignaciobianchi/devdev/coro/CORO/CORO/Assets.xcassets --compile /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/assetcatalog_output/thinned --output-format human-readable-text --notices --warnings --export-dependency-info /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/assetcatalog_dependencies_thinned --output-partial-info-plist /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/assetcatalog_generated_info.plist_thinned --app-icon AppIcon --accent-color AccentColor --compress-pngs --enable-on-demand-resources YES --filter-for-thinning-device-configuration iPhone15,4 --filter-for-device-os-version 17.5 --development-region en --target-device iphone --target-device ipad --minimum-deployment-target 16.0 --platform iphonesimulator
+/* com.apple.actool.compilation-results */
+/Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/assetcatalog_generated_info.plist_thinned
+
+
+LinkAssetCatalog /Users/juanignaciobianchi/devdev/coro/CORO/CORO/Assets.xcassets (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    builtin-linkAssetCatalog --thinned /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/assetcatalog_output/thinned --thinned-dependencies /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/assetcatalog_dependencies_thinned --thinned-info-plist-content /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/assetcatalog_generated_info.plist_thinned --unthinned /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/assetcatalog_output/unthinned --unthinned-dependencies /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/assetcatalog_dependencies_unthinned --unthinned-info-plist-content /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/assetcatalog_generated_info.plist_unthinned --output /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Products/Debug-iphonesimulator/CORO.app --plist-output /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/assetcatalog_generated_info.plist
+
+SwiftDriver CORO normal arm64 com.apple.xcode.tools.swift.compiler (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    builtin-SwiftDriver -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name CORO -Onone -enforce-exclusivity\=checked @/Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/Objects-normal/arm64/CORO.SwiftFileList -DDEBUG -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.4.sdk -target arm64-apple-ios16.0-simulator -g -module-cache-path /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Index.noindex/DataStore -swift-version 5 -I /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Products/Debug-iphonesimulator -F /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Products/Debug-iphonesimulator -emit-localized-strings -emit-localized-strings-path /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/Objects-normal/arm64 -c -j14 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator18.4-22E235-71825a6d136aa4733edcbe86ece5525b.sdkstatcache -output-file-map /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/Objects-normal/arm64/CORO-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/Objects-normal/arm64/CORO.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/Objects-normal/arm64/CORO_const_extract_protocols.json -Xcc -iquote -Xcc /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO-generated-files.hmap -Xcc -I/Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO-own-target-headers.hmap -Xcc -I/Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO-all-target-headers.hmap -Xcc -iquote -Xcc /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO-project-headers.hmap -Xcc -I/Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/DerivedSources-normal/arm64 -Xcc -I/Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/DerivedSources/arm64 -Xcc -I/Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/Objects-normal/arm64/CORO-Swift.h -working-directory /Users/juanignaciobianchi/devdev/coro/CORO -experimental-emit-module-separately -disable-cmo
+
+ProcessInfoPlistFile /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Products/Debug-iphonesimulator/CORO.app/Info.plist /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/empty-CORO.plist (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    builtin-infoPlistUtility /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/empty-CORO.plist -producttype com.apple.product-type.application -genpkginfo /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Products/Debug-iphonesimulator/CORO.app/PkgInfo -expandbuildsettings -format binary -platform iphonesimulator -additionalcontentfile /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/assetcatalog_generated_info.plist -o /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Products/Debug-iphonesimulator/CORO.app/Info.plist
+
+SwiftCompile normal arm64 Compiling\ ChatViewModel.swift /Users/juanignaciobianchi/devdev/coro/CORO/CORO/ViewModels/ChatViewModel.swift (in target 'CORO' from project 'CORO')
+
+SwiftCompile normal arm64 /Users/juanignaciobianchi/devdev/coro/CORO/CORO/ViewModels/ChatViewModel.swift (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    
+
+SwiftCompile normal arm64 Compiling\ ContentView.swift /Users/juanignaciobianchi/devdev/coro/CORO/CORO/Views/ContentView.swift (in target 'CORO' from project 'CORO')
+SwiftCompile normal arm64 /Users/juanignaciobianchi/devdev/coro/CORO/CORO/Views/ContentView.swift (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    
+
+SwiftCompile normal arm64 Compiling\ ModelSelectorView.swift /Users/juanignaciobianchi/devdev/coro/CORO/CORO/Views/Components/ModelSelectorView.swift (in target 'CORO' from project 'CORO')
+SwiftCompile normal arm64 /Users/juanignaciobianchi/devdev/coro/CORO/CORO/Views/Components/ModelSelectorView.swift (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    
+
+SwiftCompile normal arm64 Compiling\ CoroApp.swift /Users/juanignaciobianchi/devdev/coro/CORO/CORO/CoroApp.swift (in target 'CORO' from project 'CORO')
+
+SwiftCompile normal arm64 /Users/juanignaciobianchi/devdev/coro/CORO/CORO/CoroApp.swift (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    
+
+SwiftCompile normal arm64 Compiling\ SettingsView.swift /Users/juanignaciobianchi/devdev/coro/CORO/CORO/Views/SettingsView.swift (in target 'CORO' from project 'CORO')
+SwiftCompile normal arm64 /Users/juanignaciobianchi/devdev/coro/CORO/CORO/Views/SettingsView.swift (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    
+
+SwiftCompile normal arm64 Compiling\ ResultsView.swift /Users/juanignaciobianchi/devdev/coro/CORO/CORO/Views/ResultsView.swift (in target 'CORO' from project 'CORO')
+
+SwiftCompile normal arm64 /Users/juanignaciobianchi/devdev/coro/CORO/CORO/Views/ResultsView.swift (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    
+
+SwiftCompile normal arm64 Compiling\ GeneratedAssetSymbols.swift /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'CORO' from project 'CORO')
+
+SwiftCompile normal arm64 /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    
+
+SwiftEmitModule normal arm64 Emitting\ module\ for\ CORO (in target 'CORO' from project 'CORO')
+Failed frontend command:
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift-frontend -frontend -emit-module -experimental-skip-non-inlinable-function-bodies-without-types /Users/juanignaciobianchi/devdev/coro/CORO/CORO/Views/ContentView.swift /Users/juanignaciobianchi/devdev/coro/CORO/CORO/Views/Components/ModelSelectorView.swift /Users/juanignaciobianchi/devdev/coro/CORO/CORO/CoroApp.swift /Users/juanignaciobianchi/devdev/coro/CORO/CORO/ViewModels/ChatViewModel.swift /Users/juanignaciobianchi/devdev/coro/CORO/CORO/Models/ChatModels.swift /Users/juanignaciobianchi/devdev/coro/CORO/CORO/Services/APIService.swift /Users/juanignaciobianchi/devdev/coro/CORO/CORO/Views/ResultsView.swift /Users/juanignaciobianchi/devdev/coro/CORO/CORO/Views/SettingsView.swift /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/DerivedSources/GeneratedAssetSymbols.swift -target arm64-apple-ios16.0-simulator -Xllvm -aarch64-use-tbi -enable-objc-interop -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.4.sdk -I /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Products/Debug-iphonesimulator -F /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Products/Debug-iphonesimulator -no-color-diagnostics -enable-testing -g -debug-info-format\=dwarf -dwarf-version\=4 -module-cache-path /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -swift-version 5 -enforce-exclusivity\=checked -Onone -D DEBUG -serialize-debugging-options -const-gather-protocols-file /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/Objects-normal/arm64/CORO_const_extract_protocols.json -enable-experimental-feature DebugDescriptionMacro -enable-bare-slash-regex -empty-abi-descriptor -validate-clang-modules-once -clang-build-session-file /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -working-directory -Xcc /Users/juanignaciobianchi/devdev/coro/CORO -resource-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift -enable-anonymous-context-mangled-names -file-compilation-dir /Users/juanignaciobianchi/devdev/coro/CORO -Xcc -ivfsstatcache -Xcc /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator18.4-22E235-71825a6d136aa4733edcbe86ece5525b.sdkstatcache -Xcc -I/Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/swift-overrides.hmap -Xcc -iquote -Xcc /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO-generated-files.hmap -Xcc -I/Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO-own-target-headers.hmap -Xcc -I/Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO-all-target-headers.hmap -Xcc -iquote -Xcc /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/CORO-project-headers.hmap -Xcc -I/Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/DerivedSources-normal/arm64 -Xcc -I/Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/DerivedSources/arm64 -Xcc -I/Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/DerivedSources -Xcc -DDEBUG\=1 -module-name CORO -frontend-parseable-output -disable-clang-spi -target-sdk-version 18.4 -target-sdk-name iphonesimulator18.4 -external-plugin-path /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server -external-plugin-path /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/local/lib/swift/host/plugins\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server -in-process-plugin-server-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/libSwiftInProcPluginServer.dylib -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/local/lib/swift/host/plugins -emit-module-doc-path /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/Objects-normal/arm64/CORO.swiftdoc -emit-module-source-info-path /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/Objects-normal/arm64/CORO.swiftsourceinfo -emit-objc-header-path /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/Objects-normal/arm64/CORO-Swift.h -serialize-diagnostics-path /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/Objects-normal/arm64/CORO-master-emit-module.dia -emit-dependencies-path /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/Objects-normal/arm64/CORO-master-emit-module.d -o /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/Objects-normal/arm64/CORO.swiftmodule -emit-abi-descriptor-path /Users/juanignaciobianchi/Library/Developer/Xcode/DerivedData/CORO-hlctrpmigoejydfyknmdnpcfpfhn/Build/Intermediates.noindex/CORO.build/Debug-iphonesimulator/CORO.build/Objects-normal/arm64/CORO.abi.json
+
+EmitSwiftModule normal arm64 (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    
+/Users/juanignaciobianchi/devdev/coro/CORO/CORO/ViewModels/ChatViewModel.swift:23:35: error: call to main actor-isolated initializer 'init()' in a synchronous nonisolated context
+    init(apiService: APIService = APIService()) {
+                                  ^
+/Users/juanignaciobianchi/devdev/coro/CORO/CORO/Services/APIService.swift:34:5: note: calls to initializer 'init()' from outside of its actor context are implicitly asynchronous
+    init() {
+    ^
+
+SwiftCompile normal arm64 Compiling\ APIService.swift /Users/juanignaciobianchi/devdev/coro/CORO/CORO/Services/APIService.swift (in target 'CORO' from project 'CORO')
+
+SwiftCompile normal arm64 /Users/juanignaciobianchi/devdev/coro/CORO/CORO/Services/APIService.swift (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    
+
+SwiftCompile normal arm64 Compiling\ ChatModels.swift /Users/juanignaciobianchi/devdev/coro/CORO/CORO/Models/ChatModels.swift (in target 'CORO' from project 'CORO')
+
+SwiftCompile normal arm64 /Users/juanignaciobianchi/devdev/coro/CORO/CORO/Models/ChatModels.swift (in target 'CORO' from project 'CORO')
+    cd /Users/juanignaciobianchi/devdev/coro/CORO
+    
+
+** BUILD FAILED **
+
+
+The following build commands failed:
+	SwiftEmitModule normal arm64 Emitting\ module\ for\ CORO (in target 'CORO' from project 'CORO')
+	EmitSwiftModule normal arm64 (in target 'CORO' from project 'CORO')
+	Building project CORO with scheme CORO
+(3 failures)

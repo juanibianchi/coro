@@ -19,6 +19,11 @@ class Config:
     # API Configuration
     DEEPSEEK_API_URL: str = "https://api.deepseek.com/v1/chat/completions"
 
+    # Security / CORS Configuration
+    CORS_ALLOWED_ORIGINS: str = os.getenv("CORS_ALLOWED_ORIGINS", "*")
+    CORS_ALLOW_CREDENTIALS: bool = os.getenv("CORS_ALLOW_CREDENTIALS", "true").lower() == "true"
+    CORO_API_TOKEN: Optional[str] = os.getenv("CORO_API_TOKEN")
+
     # Model Configuration
     MODELS = {
         "gemini": {
@@ -88,6 +93,31 @@ class Config:
             "GROQ_API_KEY": bool(cls.GROQ_API_KEY),
             "DEEPSEEK_API_KEY": bool(cls.DEEPSEEK_API_KEY)
         }
+
+    @classmethod
+    def get_allowed_origins(cls) -> list[str]:
+        """Return parsed list of allowed origins for CORS configuration."""
+        origins = cls.CORS_ALLOWED_ORIGINS
+        if not origins or origins == "*":
+            return ["*"]
+
+        return [
+            origin.strip()
+            for origin in origins.split(",")
+            if origin.strip()
+        ]
+
+    @classmethod
+    def should_allow_credentials(cls, origins: list[str]) -> bool:
+        """
+        Decide whether credentials should be allowed for CORS.
+
+        FastAPI disallows credentials when using a wildcard origin, so we only enable
+        them when a concrete origin list is configured.
+        """
+        if origins == ["*"]:
+            return False
+        return cls.CORS_ALLOW_CREDENTIALS
 
 
 # Create config instance

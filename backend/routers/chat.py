@@ -4,8 +4,9 @@ import asyncio
 import logging
 import time
 from datetime import datetime, timezone
-from typing import List
-from fastapi import APIRouter, HTTPException
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from backend.models.schemas import (
     ChatRequest,
     SingleChatRequest,
@@ -23,6 +24,34 @@ from backend.services.deepseek_service import DeepSeekService
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# Security dependency
+auth_scheme = HTTPBearer(auto_error=False)
+
+
+def require_api_token(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(auth_scheme)
+) -> None:
+    """
+    Enforce bearer token authentication when CORO_API_TOKEN is configured.
+
+    Allows unauthenticated access only when no token is set, which is useful for
+    local development or personal experiments.
+    """
+    if not config.CORO_API_TOKEN:
+        return
+
+    if (
+        not credentials
+        or credentials.scheme.lower() != "bearer"
+        or credentials.credentials != config.CORO_API_TOKEN
+    ):
+        logger.warning("Unauthorized access attempt detected")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized",
+        )
+
 
 # Initialize services
 gemini_service = GeminiService()
@@ -66,7 +95,7 @@ async def list_models() -> ModelsResponse:
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest) -> ChatResponse:
+async def chat(request: ChatRequest, _: None = Depends(require_api_token)) -> ChatResponse:
     """
     Send prompt to multiple models in parallel.
 
@@ -91,11 +120,17 @@ async def chat(request: ChatRequest) -> ChatResponse:
     # Create tasks for parallel execution
     tasks = []
     for model_id in request.models:
+        # Get conversation history for this model (if provided)
+        history = []
+        if request.conversation_history and model_id in request.conversation_history:
+            history = request.conversation_history[model_id]
+
         task = _generate_for_model(
             model_id,
             request.prompt,
             request.temperature,
-            request.max_tokens
+            request.max_tokens,
+            history
         )
         tasks.append(task)
 
@@ -117,7 +152,11 @@ async def chat(request: ChatRequest) -> ChatResponse:
 
 
 @router.post("/chat/{model_id}", response_model=ModelResponse)
-async def chat_single(model_id: str, request: SingleChatRequest) -> ModelResponse:
+async def chat_single(
+    model_id: str,
+    request: SingleChatRequest,
+    _: None = Depends(require_api_token)
+) -> ModelResponse:
     """
     Send prompt to a single model.
 
@@ -150,7 +189,8 @@ async def _generate_for_model(
     model_id: str,
     prompt: str,
     temperature: float,
-    max_tokens: int
+    max_tokens: int,
+    conversation_history: List = None
 ) -> ModelResponse:
     """
     Generate a response for a specific model.
@@ -160,19 +200,23 @@ async def _generate_for_model(
         prompt: The prompt to send
         temperature: Temperature for generation
         max_tokens: Maximum tokens to generate
+        conversation_history: Optional list of previous messages
 
     Returns:
         ModelResponse with the generated response or error
     """
+    if conversation_history is None:
+        conversation_history = []
+
     try:
         if model_id == "gemini":
-            return await gemini_service.generate(prompt, temperature, max_tokens)
+            return await gemini_service.generate(prompt, temperature, max_tokens, conversation_history)
 
         elif model_id in ["llama-70b", "llama-8b", "mixtral"]:
-            return await groq_service.generate(model_id, prompt, temperature, max_tokens)
+            return await groq_service.generate(model_id, prompt, temperature, max_tokens, conversation_history)
 
         elif model_id == "deepseek":
-            return await deepseek_service.generate(prompt, temperature, max_tokens)
+            return await deepseek_service.generate(prompt, temperature, max_tokens, conversation_history)
 
         else:
             # This should never happen due to validation, but just in case

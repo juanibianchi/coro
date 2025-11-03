@@ -5,6 +5,8 @@ httpx>=0.28.0
 python-dotenv>=1.0.0
 google-generativeai>=0.8.0
 groq>=0.13.0
+tenacity>=9.0.0
+cachetools>=5.5.0
 
 # Testing dependencies
 pytest>=8.0.0

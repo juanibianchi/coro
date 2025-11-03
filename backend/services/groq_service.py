@@ -21,7 +21,8 @@ class GroqService:
         model_id: str,
         prompt: str,
         temperature: float = 0.7,
-        max_tokens: int = 512
+        max_tokens: int = 512,
+        conversation_history: list = None
     ) -> ModelResponse:
         """
         Generate a response using a Groq model.
@@ -31,6 +32,7 @@ class GroqService:
             prompt: The input prompt
             temperature: Temperature for generation (0.0-1.0)
             max_tokens: Maximum tokens to generate
+            conversation_history: Optional list of previous messages
 
         Returns:
             ModelResponse with the generated text or error
@@ -47,14 +49,24 @@ class GroqService:
 
             model_name = config.MODELS[model_id]["model_name"]
 
+            # Build messages array from conversation history
+            messages = []
+            if conversation_history:
+                for msg in conversation_history:
+                    messages.append({
+                        "role": msg.role,
+                        "content": msg.content
+                    })
+
+            # Add current prompt
+            messages.append({
+                "role": "user",
+                "content": prompt,
+            })
+
             # Create chat completion
             chat_completion = self.client.chat.completions.create(
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt,
-                    }
-                ],
+                messages=messages,
                 model=model_name,
                 temperature=temperature,
                 max_tokens=max_tokens,

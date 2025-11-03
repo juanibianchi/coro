@@ -5,6 +5,7 @@ from typing import Optional
 import httpx
 from backend.config import config
 from backend.models.schemas import ModelResponse
+from backend.utils.performance import get_http_client, with_retry
 
 
 class DeepSeekService:
@@ -16,19 +17,50 @@ class DeepSeekService:
         self.api_key = config.DEEPSEEK_API_KEY
         self.model_name = config.MODELS["deepseek"]["model_name"]
 
+    @with_retry(max_attempts=3, min_wait=1.0, max_wait=10.0)
+    async def _make_request(
+        self,
+        payload: dict,
+        headers: dict
+    ) -> dict:
+        """
+        Make HTTP request to DeepSeek API with retry logic.
+
+        Args:
+            payload: Request payload
+            headers: Request headers
+
+        Returns:
+            Response data dictionary
+
+        Raises:
+            httpx.HTTPStatusError: On HTTP errors
+            httpx.HTTPError: On connection/timeout errors
+        """
+        client = get_http_client()
+        response = await client.post(
+            self.api_url,
+            json=payload,
+            headers=headers
+        )
+        response.raise_for_status()
+        return response.json()
+
     async def generate(
         self,
         prompt: str,
         temperature: float = 0.7,
-        max_tokens: int = 512
+        max_tokens: int = 512,
+        conversation_history: list = None
     ) -> ModelResponse:
         """
-        Generate a response using DeepSeek API.
+        Generate a response using DeepSeek API with connection pooling and retry logic.
 
         Args:
             prompt: The input prompt
             temperature: Temperature for generation (0.0-1.0)
             max_tokens: Maximum tokens to generate
+            conversation_history: Optional list of previous messages
 
         Returns:
             ModelResponse with the generated text or error
@@ -39,15 +71,25 @@ class DeepSeekService:
             if not self.api_key:
                 raise ValueError("DeepSeek API key not configured")
 
+            # Build messages array from conversation history
+            messages = []
+            if conversation_history:
+                for msg in conversation_history:
+                    messages.append({
+                        "role": msg.role,
+                        "content": msg.content
+                    })
+
+            # Add current prompt
+            messages.append({
+                "role": "user",
+                "content": prompt
+            })
+
             # Prepare request payload
             payload = {
                 "model": self.model_name,
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
+                "messages": messages,
                 "temperature": temperature,
                 "max_tokens": max_tokens
             }
@@ -58,15 +100,8 @@ class DeepSeekService:
                 "Content-Type": "application/json"
             }
 
-            # Make async HTTP request
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(
-                    self.api_url,
-                    json=payload,
-                    headers=headers
-                )
-                response.raise_for_status()
-                data = response.json()
+            # Make request with retry logic and connection pooling
+            data = await self._make_request(payload, headers)
 
             # Calculate latency
             latency_ms = int((time.time() - start_time) * 1000)
