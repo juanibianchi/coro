@@ -16,9 +16,15 @@ struct ContentView: View {
             NavigationStack {
                 Group {
                     if viewModel.viewState == .success && !viewModel.responses.isEmpty {
-                        ResultsView(viewModel: viewModel) {
-                            viewModel.returnToPrompt()
-                        }
+                        ResultsView(
+                            viewModel: viewModel,
+                            onClose: {
+                                viewModel.returnToPrompt()
+                            },
+                            onOpenSettings: {
+                                showingSettings = true
+                            }
+                        )
                     } else {
                         InputView(
                             viewModel: viewModel,
@@ -110,6 +116,21 @@ struct InputView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            if let error = viewModel.globalError {
+                let action = primaryAction(for: error)
+                Group {
+                    GlobalErrorBanner(
+                        error: error,
+                        actionTitle: action?.title,
+                        action: action?.handler,
+                        onDismiss: { withAnimation { viewModel.globalError = nil } }
+                    )
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 16)
+                .padding(.bottom, 12)
+            }
+
             ScrollView {
                 VStack(spacing: 40) {
                     // Spacer for top
@@ -296,6 +317,17 @@ struct InputView: View {
                 .padding(.bottom, 30)
                 .background(AppTheme.Colors.surface.opacity(0.9))
             }
+        }
+    }
+
+    private func primaryAction(for error: GlobalError) -> (title: String, handler: () -> Void)? {
+        guard let code = error.code else { return nil }
+
+        switch code {
+        case "authentication_failed", "api_key_missing", "api_key_invalid", "unauthorized":
+            return ("Open Settings", onShowSettings)
+        default:
+            return nil
         }
     }
 }

@@ -4,6 +4,7 @@ import time
 from typing import Optional, Dict, Tuple
 
 from fastapi import HTTPException, Request, status
+from backend.models.error_codes import ErrorCode
 
 try:
     from redis.asyncio import Redis
@@ -228,6 +229,10 @@ async def enforce_rate_limit(request: Request) -> None:
     except RateLimitExceeded as exc:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many requests. Please slow down.",
+            detail={
+                "message": "Too many requests. Please slow down.",
+                "error_code": ErrorCode.RATE_LIMITED.value,
+                "retry_after": exc.retry_after,
+            },
             headers={"Retry-After": str(exc.retry_after)},
         ) from exc

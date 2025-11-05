@@ -92,7 +92,7 @@ enum APIError: LocalizedError {
     case networkError(Error)
     case invalidResponse
     case decodingError(Error)
-    case serverError(String)
+    case serverError(message: String, code: String?, statusCode: Int?, retryAfter: Int?)
 
     var errorDescription: String? {
         switch self {
@@ -104,7 +104,7 @@ enum APIError: LocalizedError {
             return "Invalid response from server."
         case .decodingError:
             return "Failed to parse server response."
-        case .serverError(let message):
+        case .serverError(let message, _, _, _):
             return message
         }
     }
@@ -165,6 +165,26 @@ private struct AppleSignInPayload: Codable {
         case identityToken = "identity_token"
         case nonce
     }
+}
+
+private struct ServerErrorDetail: Codable {
+    let message: String?
+    let errorCode: String?
+    let retryAfter: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case message
+        case errorCode = "error_code"
+        case retryAfter = "retry_after"
+    }
+}
+
+private struct ServerErrorEnvelope: Codable {
+    let detail: ServerErrorDetail
+}
+
+private struct ServerErrorStringEnvelope: Codable {
+    let detail: String
 }
 
 class APIService: ObservableObject {
@@ -372,11 +392,31 @@ class APIService: ObservableObject {
         }
 
         guard httpResponse.statusCode == 200 else {
-            if let errorDict = try? JSONDecoder().decode([String: String].self, from: data),
-               let detail = errorDict["detail"] {
-                throw APIError.serverError(detail)
+            if let envelope = try? jsonDecoder.decode(ServerErrorEnvelope.self, from: data) {
+                let message = envelope.detail.message ?? HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode)
+                throw APIError.serverError(
+                    message: message,
+                    code: envelope.detail.errorCode,
+                    statusCode: httpResponse.statusCode,
+                    retryAfter: envelope.detail.retryAfter
+                )
             }
-            throw APIError.serverError("Server returned status code \(httpResponse.statusCode)")
+
+            if let stringEnvelope = try? jsonDecoder.decode(ServerErrorStringEnvelope.self, from: data) {
+                throw APIError.serverError(
+                    message: stringEnvelope.detail,
+                    code: nil,
+                    statusCode: httpResponse.statusCode,
+                    retryAfter: nil
+                )
+            }
+
+            throw APIError.serverError(
+                message: HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode),
+                code: nil,
+                statusCode: httpResponse.statusCode,
+                retryAfter: nil
+            )
         }
 
         let signedIn = try jsonDecoder.decode(AppleSignInResponse.self, from: data)
@@ -396,11 +436,31 @@ class APIService: ObservableObject {
         }
 
         guard httpResponse.statusCode == 200 else {
-            if let errorDict = try? JSONDecoder().decode([String: String].self, from: data),
-               let detail = errorDict["detail"] {
-                throw APIError.serverError(detail)
+            if let envelope = try? jsonDecoder.decode(ServerErrorEnvelope.self, from: data) {
+                let message = envelope.detail.message ?? HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode)
+                throw APIError.serverError(
+                    message: message,
+                    code: envelope.detail.errorCode,
+                    statusCode: httpResponse.statusCode,
+                    retryAfter: envelope.detail.retryAfter
+                )
             }
-            throw APIError.serverError("Server returned status code \(httpResponse.statusCode)")
+
+            if let stringEnvelope = try? jsonDecoder.decode(ServerErrorStringEnvelope.self, from: data) {
+                throw APIError.serverError(
+                    message: stringEnvelope.detail,
+                    code: nil,
+                    statusCode: httpResponse.statusCode,
+                    retryAfter: nil
+                )
+            }
+
+            throw APIError.serverError(
+                message: HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode),
+                code: nil,
+                statusCode: httpResponse.statusCode,
+                retryAfter: nil
+            )
         }
 
         do {

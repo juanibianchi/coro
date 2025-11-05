@@ -9,6 +9,13 @@ enum ViewState: Equatable {
     case error(String)
 }
 
+struct GlobalError: Equatable {
+    let message: String
+    let code: String?
+    let statusCode: Int?
+    let retryAfter: Int?
+}
+
 @MainActor
 class ChatViewModel: ObservableObject {
     @Published var prompt: String = ""
@@ -20,6 +27,7 @@ class ChatViewModel: ObservableObject {
     @Published var viewState: ViewState = .idle
     @Published var selectedTab: Int = 0
     @Published var conversationHistory: [String: [Message]] = [:]  // Per-model conversation history
+    @Published var globalError: GlobalError?
 
     // Model parameters
     @Published var temperature: Double = 0.7
@@ -119,6 +127,8 @@ class ChatViewModel: ObservableObject {
             viewState = .success
             return
         }
+
+        globalError = nil
 
         viewState = .loading
         responses = []
@@ -230,20 +240,23 @@ class ChatViewModel: ObservableObject {
                     totalLatency = max(totalLatency, response.latencyMs)
 
                 case .failure(let error):
-                    if let index = responses.firstIndex(where: { $0.model == modelId }) {
-                        responses[index] = ModelResponse(
-                            model: modelId,
-                            response: "",
-                            tokens: nil,
-                            latencyMs: 0,
-                            error: error.localizedDescription,
-                            errorCode: "unknown_error"
-                        )
-                    }
-                    selectFirstAvailableResponseIfNeeded()
-                    replacePendingAssistantMessage(for: modelId, with: ErrorCodeHelper.getUserFriendlyMessage(for: "unknown_error", originalMessage: error.localizedDescription))
+                    let failureLatency = Int(Date().timeIntervalSince(overallStart) * 1000)
+                    let (errorResponse, banner) = makeErrorResponse(for: modelId, error: error, latencyMs: failureLatency)
 
-                    totalLatency = max(totalLatency, Int(Date().timeIntervalSince(overallStart) * 1000))
+                    if let index = responses.firstIndex(where: { $0.model == modelId }) {
+                        responses[index] = errorResponse
+                    } else {
+                        responses.append(errorResponse)
+                    }
+
+                    selectFirstAvailableResponseIfNeeded()
+                    replacePendingAssistantMessage(for: modelId, with: errorResponse.userFriendlyError)
+
+                    if globalError == nil, let banner {
+                        globalError = banner
+                    }
+
+                    totalLatency = max(totalLatency, failureLatency)
                 }
             }
         }
@@ -418,6 +431,104 @@ class ChatViewModel: ObservableObject {
         conversationHistory[modelId] = messages
     }
 
+    private func normalizedErrorCode(from code: String?, statusCode: Int?, message: String) -> String? {
+        if let code = code, !code.isEmpty {
+            return code
+        }
+
+        if let status = statusCode {
+            switch status {
+            case 401, 403:
+                return "unauthorized"
+            case 408:
+                return "timeout"
+            case 429:
+                return "rate_limited"
+            case 500...599:
+                return "service_unavailable"
+            default:
+                break
+            }
+        }
+
+        let lowercased = message.lowercased()
+        if lowercased.contains("api key") || lowercased.contains("unauthorized") {
+            return "unauthorized"
+        }
+        if lowercased.contains("rate limit") {
+            return "rate_limited"
+        }
+        if lowercased.contains("timeout") {
+            return "timeout"
+        }
+        if lowercased.contains("network") || lowercased.contains("connection") {
+            return "network_error"
+        }
+        if lowercased.contains("service unavailable") {
+            return "service_unavailable"
+        }
+
+        return nil
+    }
+
+    private func makeGlobalError(from error: APIError) -> GlobalError {
+        switch error {
+        case .serverError(let message, let code, let statusCode, let retryAfter):
+            let normalized = normalizedErrorCode(from: code, statusCode: statusCode, message: message)
+            let friendly = normalized.map { ErrorCodeHelper.getUserFriendlyMessage(for: $0, originalMessage: message) } ?? message
+            return GlobalError(message: friendly, code: normalized, statusCode: statusCode, retryAfter: retryAfter)
+
+        case .networkError(let underlying):
+            let friendly = ErrorCodeHelper.getUserFriendlyMessage(for: "network_error", originalMessage: underlying.localizedDescription)
+            return GlobalError(message: friendly, code: "network_error", statusCode: nil, retryAfter: nil)
+
+        case .invalidURL:
+            let friendly = ErrorCodeHelper.getUserFriendlyMessage(for: "invalid_request", originalMessage: "Invalid API URL. Please check settings.")
+            return GlobalError(message: friendly, code: "invalid_request", statusCode: nil, retryAfter: nil)
+
+        case .invalidResponse:
+            let friendly = ErrorCodeHelper.getUserFriendlyMessage(for: "service_unavailable", originalMessage: "Received an unexpected response from the server.")
+            return GlobalError(message: friendly, code: "service_unavailable", statusCode: nil, retryAfter: nil)
+
+        case .decodingError:
+            let friendly = ErrorCodeHelper.getUserFriendlyMessage(for: "internal_error", originalMessage: "Failed to parse server response.")
+            return GlobalError(message: friendly, code: "internal_error", statusCode: nil, retryAfter: nil)
+        }
+    }
+
+    private func makeErrorResponse(for modelId: String, error: Error, latencyMs: Int) -> (ModelResponse, GlobalError?) {
+        if let apiError = error as? APIError {
+            let global = makeGlobalError(from: apiError)
+            let errorCode = global.code ?? "unknown_error"
+            let response = ModelResponse(
+                model: modelId,
+                response: "",
+                tokens: nil,
+                latencyMs: latencyMs,
+                error: global.message,
+                errorCode: errorCode
+            )
+            return (response, global)
+        }
+
+        let message = error.localizedDescription
+        let response = ModelResponse(
+            model: modelId,
+            response: "",
+            tokens: nil,
+            latencyMs: latencyMs,
+            error: message,
+            errorCode: "unknown_error"
+        )
+        let global = GlobalError(
+            message: message,
+            code: "unknown_error",
+            statusCode: nil,
+            retryAfter: nil
+        )
+        return (response, global)
+    }
+
     private func shouldAutoRetry(_ response: ModelResponse) -> Bool {
         guard response.hasError else { return false }
 
@@ -446,6 +557,10 @@ class ChatViewModel: ObservableObject {
 
         await MainActor.run {
             saveConversation()
+            let remainingIssues = responses.contains { shouldAutoRetry($0) }
+            if !remainingIssues {
+                globalError = nil
+            }
         }
     }
 
@@ -457,6 +572,7 @@ class ChatViewModel: ObservableObject {
         totalLatency = 0
         hasAutoSelectedFirstReadyResponse = false
         conversationHistory = [:]
+        globalError = nil
     }
 
     var canSubmit: Bool {
@@ -592,6 +708,7 @@ class ChatViewModel: ObservableObject {
         totalLatency = 0
         conversationHistory = [:]
         activeConversation = nil
+        globalError = nil
 
         // Clear cache
         lastPrompt = ""
@@ -680,20 +797,25 @@ class ChatViewModel: ObservableObject {
 
             saveConversation()
 
-        } catch {
-            // Handle error
-            if let index = responses.firstIndex(where: { $0.model == modelId }) {
-                responses[index] = ModelResponse(
-                    model: modelId,
-                    response: responses[index].response,
-                    tokens: nil,
-                    latencyMs: 0,
-                    error: error.localizedDescription,
-                    errorCode: "unknown_error"
-                )
+            if !responses.contains(where: { $0.hasError }) {
+                globalError = nil
             }
 
-            replacePendingAssistantMessage(for: modelId, with: ErrorCodeHelper.getUserFriendlyMessage(for: "unknown_error", originalMessage: error.localizedDescription))
+        } catch {
+            // Handle error
+            let (errorResponse, banner) = makeErrorResponse(for: modelId, error: error, latencyMs: 0)
+
+            if let index = responses.firstIndex(where: { $0.model == modelId }) {
+                responses[index] = errorResponse
+            } else {
+                responses.append(errorResponse)
+            }
+
+            replacePendingAssistantMessage(for: modelId, with: errorResponse.userFriendlyError)
+
+            if globalError == nil, let banner {
+                globalError = banner
+            }
 
             let generator = UINotificationFeedbackGenerator()
             generator.notificationOccurred(.error)

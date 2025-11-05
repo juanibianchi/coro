@@ -51,7 +51,10 @@ def require_api_token(
         logger.warning("Unauthorized access attempt detected")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Unauthorized",
+            detail={
+                "message": "Unauthorized",
+                "error_code": ErrorCode.UNAUTHORIZED.value,
+            },
         )
 
 

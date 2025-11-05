@@ -3,6 +3,7 @@ import SwiftUI
 struct ResultsView: View {
     @ObservedObject var viewModel: ChatViewModel
     let onClose: () -> Void
+    let onOpenSettings: () -> Void
     @State private var showingCopyConfirmation = false
     @State private var showingShareSheet = false
     @State private var isPromptExpanded = false
@@ -15,6 +16,20 @@ struct ResultsView: View {
             AppTheme.Colors.background
                 .ignoresSafeArea()
             VStack(spacing: 0) {
+                if let error = viewModel.globalError {
+                    let action = primaryAction(for: error)
+                    Group {
+                        GlobalErrorBanner(
+                            error: error,
+                            actionTitle: action?.title,
+                            action: action?.handler,
+                            onDismiss: { withAnimation { viewModel.globalError = nil } }
+                        )
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
+                    .padding(.bottom, 8)
+                }
                 headerSection
                 tabSection
                 responseSection
@@ -60,6 +75,12 @@ struct ResultsView: View {
                         Label("Copy All Responses", systemImage: "doc.on.doc")
                     }
 
+                    Button {
+                        onOpenSettings()
+                    } label: {
+                        Label("Open Settings", systemImage: "gearshape")
+                    }
+
                     Button(role: .destructive) {
                         showingSidebar = false
                         onClose()
@@ -81,6 +102,17 @@ struct ResultsView: View {
             if let response = currentResponse {
                 ShareSheet(items: [response.response])
             }
+        }
+    }
+
+    private func primaryAction(for error: GlobalError) -> (title: String, handler: () -> Void)? {
+        guard let code = error.code else { return nil }
+
+        switch code {
+        case "authentication_failed", "api_key_missing", "api_key_invalid", "unauthorized":
+            return ("Open Settings", onOpenSettings)
+        default:
+            return nil
         }
     }
 

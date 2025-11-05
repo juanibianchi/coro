@@ -280,6 +280,7 @@ messages:
 - ✅ Added in-app education for Apple Sign-In benefits and BYOK via home upsell cards + refreshed Settings copy so users understand premium access and key storage
 - ✅ Polished surface styling (capsule handles, card shadows, consistent overlays) to tighten the pro iOS feel across results and home
 - ✅ Follow-up menu offers “Ask every model” so side-questions can be broadcast without retyping
+- ✅ Improved error UX: consistent backend error codes, richer banners in-app with quick actions, and live “thinking” states for each model
 
 **Notes:**
 - Follow-up: monitor follow-up reply flow; consider persisting conversation updates instead of insert-only if needed.
@@ -405,6 +406,11 @@ When pausing work or handing off to another agent:
 - Feature branches: `feature/conversation-history`, `feature/streaming`, etc.
 - Commit messages: Follow conventional commits (feat:, fix:, docs:, etc.)
 - PR descriptions: Link to relevant sections of this document
+
+### Rate Limiting & Redis Notes
+- Redis is optional in local development. Without `REDIS_URL`, the rate limiter falls back to an in-memory bucket that resets on app restart.
+- To match production behavior, run `docker run --name coro-redis -p 6379:6379 redis/redis-stack:latest` and set `REDIS_URL=redis://localhost:6379` in your environment before launching the backend.
+- Premium session tokens from Sign in with Apple are stored in Redis with a 24-hour TTL; in the fallback mode they live in memory only, so restarting the server clears premium access.
 
 ---
 
