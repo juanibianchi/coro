@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		23E4057AF2D44B74AD426323 /* OrderedCollections in Frameworks */ = {isa = PBXBuildFile; productRef = C0C21644EA874FBD9B7152E1 /* OrderedCollections */; };
+		4EF01F9F7A2C4D558799EBD2 /* OrderedCollections in Frameworks */ = {isa = PBXBuildFile; productRef = 7F59BC1DA0C448318A1DCE72 /* OrderedCollections */; };
 		ACC777282EB817E50099F012 /* MLX in Frameworks */ = {isa = PBXBuildFile; productRef = ACC777272EB817E50099F012 /* MLX */; };
 		ACC7772A2EB817E50099F012 /* MLXFFT in Frameworks */ = {isa = PBXBuildFile; productRef = ACC777292EB817E50099F012 /* MLXFFT */; };
 		ACC7772C2EB817E50099F012 /* MLXFast in Frameworks */ = {isa = PBXBuildFile; productRef = ACC7772B2EB817E50099F012 /* MLXFast */; };
@@ -21,8 +23,6 @@
 		ACC777882EB8C1990099F012 /* MLXNN in Frameworks */ = {isa = PBXBuildFile; productRef = ACC777872EB8C1990099F012 /* MLXNN */; };
 		ACC7778A2EB8C1A10099F012 /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = ACC777892EB8C1A10099F012 /* MLXLLM */; };
 		ACC7778C2EB8C1AE0099F012 /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = ACC7778B2EB8C1AE0099F012 /* MLXLMCommon */; };
-		23E4057AF2D44B74AD426323 /* OrderedCollections in Frameworks */ = {isa = PBXBuildFile; productRef = C0C21644EA874FBD9B7152E1 /* OrderedCollections */; };
-		4EF01F9F7A2C4D558799EBD2 /* OrderedCollections in Frameworks */ = {isa = PBXBuildFile; productRef = 7F59BC1DA0C448318A1DCE72 /* OrderedCollections */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -404,7 +404,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = doste.coro;
+				PRODUCT_BUNDLE_IDENTIFIER = com.juanignaciobianchi.coroapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -435,7 +435,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = doste.coro;
+				PRODUCT_BUNDLE_IDENTIFIER = com.juanignaciobianchi.coroapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -547,6 +547,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		7F59BC1DA0C448318A1DCE72 /* OrderedCollections */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ACC7778D2EB8C2000099F012 /* XCRemoteSwiftPackageReference "swift-collections" */;
+			productName = OrderedCollections;
+		};
 		ACC777272EB817E50099F012 /* MLX */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = ACC777262EB817E50099F012 /* XCRemoteSwiftPackageReference "mlx-swift" */;
@@ -618,11 +623,6 @@
 			productName = MLXLMCommon;
 		};
 		C0C21644EA874FBD9B7152E1 /* OrderedCollections */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = ACC7778D2EB8C2000099F012 /* XCRemoteSwiftPackageReference "swift-collections" */;
-			productName = OrderedCollections;
-		};
-		7F59BC1DA0C448318A1DCE72 /* OrderedCollections */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = ACC7778D2EB8C2000099F012 /* XCRemoteSwiftPackageReference "swift-collections" */;
 			productName = OrderedCollections;

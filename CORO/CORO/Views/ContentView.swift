@@ -4,110 +4,70 @@ import SwiftData
 struct ContentView: View {
     @StateObject private var viewModel = ChatViewModel()
     @State private var showingSettings = false
+    @State private var showingParameters = false
     @State private var showingSidebar = false
     @Environment(\.modelContext) private var modelContext
 
     var body: some View {
         ZStack {
-            // Background - at the very root!
-            Color(red: 0.99, green: 0.96, blue: 0.92)
+            AppTheme.Colors.background
                 .ignoresSafeArea()
 
             NavigationStack {
                 Group {
-                    if viewModel.viewState == .loading {
-                        // Loading Skeleton
-                        LoadingSkeletonView(modelCount: viewModel.selectedModels.count)
-                            .navigationBarTitleDisplayMode(.inline)
-                            .toolbarBackground(.hidden, for: .navigationBar)
-                            .toolbar {
-                                ToolbarItem(placement: .navigationBarLeading) {
-                                    Button {
-                                        showingSidebar.toggle()
-                                    } label: {
-                                        Image(systemName: "line.3.horizontal")
-                                            .font(.title3)
-                                            .foregroundColor(Color(red: 0.9, green: 0.5, blue: 0.25))
-                                    }
-                                }
-
-                                ToolbarItem(placement: .principal) {
-                                    if !showingSidebar {
-                                        Text("CORO")
-                                            .font(.title2)
-                                            .fontWeight(.bold)
-                                            .foregroundStyle(
-                                                LinearGradient(
-                                                    colors: [Color(red: 0.95, green: 0.5, blue: 0.2), Color(red: 0.85, green: 0.4, blue: 0.3)],
-                                                    startPoint: .leading,
-                                                    endPoint: .trailing
-                                                )
-                                            )
-                                    }
-                                }
-
-                                ToolbarItem(placement: .navigationBarTrailing) {
-                                    Button {
-                                        showingSettings = true
-                                    } label: {
-                                        Image(systemName: "gearshape.fill")
-                                            .font(.title3)
-                                            .foregroundColor(Color(red: 0.9, green: 0.5, blue: 0.25))
-                                    }
-                                }
-                            }
-                    } else if viewModel.viewState == .success && !viewModel.responses.isEmpty {
-                        // Results View
-                        ResultsView(viewModel: viewModel)
+                    if viewModel.viewState == .success && !viewModel.responses.isEmpty {
+                        ResultsView(viewModel: viewModel) {
+                            viewModel.returnToPrompt()
+                        }
                     } else {
-                        // Input View
-                        InputView(viewModel: viewModel)
-                            .navigationBarTitleDisplayMode(.inline)
-                            .toolbarBackground(.hidden, for: .navigationBar)
-                            .toolbar {
-                                ToolbarItem(placement: .navigationBarLeading) {
-                                    Button {
-                                        showingSidebar.toggle()
-                                    } label: {
-                                        Image(systemName: "line.3.horizontal")
-                                            .font(.title3)
-                                            .foregroundColor(Color(red: 0.9, green: 0.5, blue: 0.25))
-                                    }
-                                }
-
-                                ToolbarItem(placement: .principal) {
-                                    if !showingSidebar {
-                                        Text("CORO")
-                                            .font(.title2)
-                                            .fontWeight(.bold)
-                                            .foregroundStyle(
-                                                LinearGradient(
-                                                    colors: [Color(red: 0.95, green: 0.5, blue: 0.2), Color(red: 0.85, green: 0.4, blue: 0.3)],
-                                                    startPoint: .leading,
-                                                    endPoint: .trailing
-                                                )
-                                            )
-                                    }
-                                }
-
-                                ToolbarItem(placement: .navigationBarTrailing) {
-                                    Button {
-                                        showingSettings = true
-                                    } label: {
-                                        Image(systemName: "gearshape.fill")
-                                            .font(.title3)
-                                            .foregroundColor(Color(red: 0.9, green: 0.5, blue: 0.25))
-                                    }
+                        InputView(
+                            viewModel: viewModel,
+                            onShowParameters: { showingParameters = true },
+                            onShowSettings: { showingSettings = true }
+                        )
+                        .allowsHitTesting(viewModel.viewState != .loading)
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbarBackground(.hidden, for: .navigationBar)
+                        .toolbar {
+                            ToolbarItem(placement: .navigationBarLeading) {
+                                Button {
+                                    showingSidebar.toggle()
+                                } label: {
+                                    Image(systemName: "line.3.horizontal")
+                                        .font(.title3)
+                                        .foregroundColor(AppTheme.Colors.accent)
                                 }
                             }
+
+                            ToolbarItem(placement: .principal) {
+                                if !showingSidebar {
+                                    Text("CORO")
+                                        .font(AppTheme.Typography.title)
+                                        .foregroundStyle(AppTheme.Gradients.accent)
+                                }
+                            }
+
+                            ToolbarItem(placement: .navigationBarTrailing) {
+                                Button {
+                                    showingSettings = true
+                                } label: {
+                                    Image(systemName: "gearshape.fill")
+                                        .font(.title3)
+                                        .foregroundColor(AppTheme.Colors.accent)
+                                }
+                            }
+                        }
                     }
                 }
-                .background(Color.clear)
+            }
             .sheet(isPresented: $showingSettings) {
                 SettingsView(apiService: viewModel.apiService)
             }
+            .sheet(isPresented: $showingParameters) {
+                ModelParametersSheet(viewModel: viewModel)
+            }
             .overlay {
-                if showingSidebar {
+                if showingSidebar && (viewModel.viewState != .success || viewModel.responses.isEmpty) {
                     Color.black.opacity(0.3)
                         .ignoresSafeArea()
                         .onTapGesture {
@@ -127,23 +87,25 @@ struct ContentView: View {
             }
             .animation(.spring(response: 0.35, dampingFraction: 0.85), value: showingSidebar)
         }
-            .task {
-                await viewModel.loadAvailableModels()
+        .overlay {
+            if viewModel.viewState == .loading {
+                LoadingSkeletonView(modelCount: viewModel.selectedModels.count)
+                    .transition(.opacity)
             }
-            .onAppear {
-                viewModel.modelContext = modelContext
-            }
-            .onChange(of: viewModel.viewState) { _, newState in
-                if case .success = newState {
-                    viewModel.saveConversation()
-                }
-            }
+        }
+        .task {
+            await viewModel.loadAvailableModels()
+        }
+        .onAppear {
+            viewModel.modelContext = modelContext
         }
     }
 }
 
 struct InputView: View {
     @ObservedObject var viewModel: ChatViewModel
+    let onShowParameters: () -> Void
+    let onShowSettings: () -> Void
     @FocusState private var isPromptFocused: Bool
 
     var body: some View {
@@ -157,14 +119,14 @@ struct InputView: View {
                     // Prompt Input
                     VStack(alignment: .leading, spacing: 16) {
                         Text("What would you like to ask?")
-                            .font(.system(size: 28, weight: .bold))
-                            .foregroundColor(Color(red: 0.2, green: 0.15, blue: 0.1))
+                            .font(AppTheme.Typography.hero)
+                            .foregroundColor(AppTheme.Colors.textPrimary)
 
                         ZStack(alignment: .topLeading) {
                             // Placeholder
                             if viewModel.prompt.isEmpty && !isPromptFocused {
                                 Text("Try asking about anything...")
-                                    .foregroundColor(.secondary.opacity(0.4))
+                                    .foregroundColor(AppTheme.Colors.textSecondary.opacity(0.5))
                                     .padding(.horizontal, 6)
                                     .padding(.top, 12)
                             }
@@ -179,22 +141,16 @@ struct InputView: View {
                         .padding(16)
                         .background(
                             RoundedRectangle(cornerRadius: 20)
-                                .fill(.ultraThinMaterial)
+                                .fill(AppTheme.Colors.surface)
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 20)
                                 .strokeBorder(
-                                    LinearGradient(
-                                        colors: isPromptFocused ?
-                                            [Color(red: 0.95, green: 0.5, blue: 0.2).opacity(0.6), Color(red: 0.85, green: 0.4, blue: 0.3).opacity(0.6)] :
-                                            [Color.white.opacity(0.3)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
+                                    isPromptFocused ? AppTheme.Colors.accent.opacity(0.4) : AppTheme.Colors.outline.opacity(0.6),
                                     lineWidth: 1.5
                                 )
                         )
-                        .shadow(color: Color.black.opacity(0.1), radius: 20, x: 0, y: 10)
+                        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 8)
                     }
                     .padding(.horizontal, 24)
 
@@ -202,18 +158,72 @@ struct InputView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
                             Text("Select Models")
-                                .font(.system(size: 20, weight: .semibold))
-                                .foregroundColor(Color(red: 0.2, green: 0.15, blue: 0.1))
+                                .font(AppTheme.Typography.title)
+                                .foregroundColor(AppTheme.Colors.textPrimary)
 
                             Spacer()
 
                             Text("\(viewModel.selectedModels.count) selected")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .font(AppTheme.Typography.caption)
+                                .foregroundColor(AppTheme.Colors.textSecondary)
                         }
                         .padding(.horizontal, 24)
 
                         ModelSelectorView(viewModel: viewModel)
+
+                        Button {
+                            onShowParameters()
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "slider.horizontal.3")
+                                    .font(.body.weight(.semibold))
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Response style")
+                                        .font(AppTheme.Typography.body)
+                                        .foregroundColor(AppTheme.Colors.textPrimary)
+                                    Text("Adjust temperature, max tokens, and more.")
+                                        .font(AppTheme.Typography.caption)
+                                        .foregroundColor(AppTheme.Colors.textSecondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.body.weight(.semibold))
+                                    .foregroundColor(AppTheme.Colors.outline.opacity(0.7))
+                            }
+                            .padding(16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(AppTheme.Colors.surface)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .strokeBorder(AppTheme.Colors.outline.opacity(0.4), lineWidth: 1)
+                            )
+                        }
+                        .padding(.horizontal, 24)
+                        .buttonStyle(.plain)
+
+                        if !viewModel.apiService.hasPremiumAccess {
+                            UpsellCard(
+                                title: "Need more headroom?",
+                                message: "Sign in with Apple to unlock higher daily request limits and priority routing on cloud models.",
+                                icon: "applelogo",
+                                actionTitle: "Increase limits",
+                                action: onShowSettings
+                            )
+                            .padding(.horizontal, 24)
+                        }
+
+                        if !viewModel.apiService.modelAPIKeys.hasAnyKeys {
+                            UpsellCard(
+                                title: "Bring your own keys",
+                                message: "Connect your own Gemini, Groq, or DeepSeek keys to use your quotas and unlock premium models.",
+                                icon: "key.fill",
+                                actionTitle: "Add keys",
+                                action: onShowSettings
+                            )
+                            .padding(.horizontal, 24)
+                        }
                     }
 
                     // Error Message
@@ -221,19 +231,19 @@ struct InputView: View {
                         HStack(spacing: 14) {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .font(.title3)
-                                .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.2))
+                                .foregroundColor(AppTheme.Colors.warning)
 
                             Text(message)
-                                .font(.body)
-                                .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.15))
+                                .font(AppTheme.Typography.body)
+                                .foregroundColor(AppTheme.Colors.textPrimary)
 
                             Spacer()
                         }
                         .padding(20)
-                        .background(.regularMaterial)
+                        .background(AppTheme.Colors.surface)
                         .overlay(
                             RoundedRectangle(cornerRadius: 16)
-                                .strokeBorder(Color(red: 0.95, green: 0.5, blue: 0.2).opacity(0.3), lineWidth: 1)
+                                .strokeBorder(AppTheme.Colors.warning.opacity(0.35), lineWidth: 1)
                         )
                         .cornerRadius(16)
                         .padding(.horizontal, 24)
@@ -245,7 +255,7 @@ struct InputView: View {
                 .padding(.bottom, 120)
             }
 
-            // Compare Button (Fixed at bottom)
+            // Ask Button (Fixed at bottom)
             VStack(spacing: 0) {
                 Button {
                     isPromptFocused = false
@@ -261,30 +271,92 @@ struct InputView: View {
                         } else {
                             Image(systemName: "sparkles")
                                 .font(.title3)
-                            Text("Compare Models")
-                                .font(.system(size: 18, weight: .semibold))
+                            Text("Ask Multiple AIs")
+                                .font(AppTheme.Typography.subtitle)
                         }
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 58)
                     .background(
-                        LinearGradient(
-                            colors: viewModel.canSubmit ? [Color(red: 0.95, green: 0.5, blue: 0.2), Color(red: 0.85, green: 0.4, blue: 0.3)] : [Color.gray.opacity(0.3)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
+                        ZStack {
+                            if viewModel.canSubmit {
+                                AppTheme.Gradients.accent
+                            } else {
+                                Color.gray.opacity(0.3)
+                            }
+                        }
                     )
                     .foregroundColor(.white)
                     .cornerRadius(16)
-                    .shadow(color: viewModel.canSubmit ? Color(red: 0.95, green: 0.5, blue: 0.2).opacity(0.3) : Color.clear, radius: 12, x: 0, y: 6)
+                    .shadow(color: viewModel.canSubmit ? AppTheme.Colors.accent.opacity(0.4) : Color.clear, radius: 14, x: 0, y: 7)
                 }
                 .disabled(!viewModel.canSubmit || viewModel.viewState == .loading)
                 .padding(.horizontal, 24)
                 .padding(.top, 20)
                 .padding(.bottom, 30)
-                .background(.regularMaterial)
+                .background(AppTheme.Colors.surface.opacity(0.9))
             }
         }
+    }
+}
+
+private struct UpsellCard: View {
+    let title: String
+    let message: String
+    let icon: String
+    let actionTitle: String
+    let action: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 14) {
+                Image(systemName: icon)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(AppTheme.Gradients.accent)
+                    .frame(width: 40, height: 40)
+                    .background(AppTheme.Colors.surfaceElevated.opacity(0.6))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(title)
+                        .font(AppTheme.Typography.subtitle)
+                        .foregroundColor(AppTheme.Colors.textPrimary)
+                    Text(message)
+                        .font(AppTheme.Typography.caption)
+                        .foregroundColor(AppTheme.Colors.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            Button(action: action) {
+                HStack {
+                    Spacer()
+                    Text(actionTitle)
+                        .font(AppTheme.Typography.caption.weight(.semibold))
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                }
+                .padding(.vertical, 10)
+                .padding(.horizontal, 16)
+                .background(AppTheme.Colors.surfaceElevated)
+                .foregroundColor(AppTheme.Colors.accent)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(AppTheme.Colors.accent.opacity(0.35), lineWidth: 1)
+                )
+            }
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 22)
+                .fill(AppTheme.Colors.surface.opacity(0.94))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 22)
+                .stroke(AppTheme.Colors.outline.opacity(0.25), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
     }
 }
 

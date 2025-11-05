@@ -31,8 +31,15 @@ class APIService: ObservableObject {
         }
     }
 
+    @Published var apiToken: String {
+        didSet {
+            UserDefaults.standard.set(apiToken, forKey: "apiToken")
+        }
+    }
+
     init() {
-        self.baseURL = UserDefaults.standard.string(forKey: "apiEndpoint") ?? "http://localhost:8000"
+        self.baseURL = UserDefaults.standard.string(forKey: "apiEndpoint") ?? "https://coro-production.up.railway.app"
+        self.apiToken = UserDefaults.standard.string(forKey: "apiToken") ?? ""
     }
 
     // MARK: - Chat Request
@@ -45,6 +52,11 @@ class APIService: ObservableObject {
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = "POST"
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        // Add Authorization header if token is provided
+        if !apiToken.isEmpty {
+            urlRequest.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
+        }
 
         do {
             let encoder = JSONEncoder()
@@ -88,8 +100,14 @@ class APIService: ObservableObject {
             throw APIError.invalidURL
         }
 
+        var urlRequest = URLRequest(url: url)
+        // Add Authorization header if token is provided
+        if !apiToken.isEmpty {
+            urlRequest.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
+        }
+
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
+            let (data, _) = try await URLSession.shared.data(for: urlRequest)
             let decoder = JSONDecoder()
             let response = try decoder.decode(ModelsResponse.self, from: data)
             return response.models
@@ -105,8 +123,14 @@ class APIService: ObservableObject {
             throw APIError.invalidURL
         }
 
+        var urlRequest = URLRequest(url: url)
+        // Add Authorization header if token is provided
+        if !apiToken.isEmpty {
+            urlRequest.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
+        }
+
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
+            let (data, _) = try await URLSession.shared.data(for: urlRequest)
             let response = try JSONDecoder().decode(HealthResponse.self, from: data)
             return response.status == "ok"
         } catch {

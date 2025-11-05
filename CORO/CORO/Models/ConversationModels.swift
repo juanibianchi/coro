@@ -27,7 +27,8 @@ final class Conversation {
                 response: response.response,
                 tokens: response.tokens,
                 latencyMs: response.latencyMs,
-                error: response.error
+                error: response.error,
+                errorCode: response.errorCode
             )
         }
         self.init(prompt: prompt, totalLatency: chatResponse.totalLatencyMs, responses: savedResponses, conversationHistory: [])
@@ -41,13 +42,15 @@ final class SavedModelResponse {
     var tokens: Int?
     var latencyMs: Int
     var error: String?
+    var errorCode: String?
 
-    init(model: String, response: String, tokens: Int?, latencyMs: Int, error: String?) {
+    init(model: String, response: String, tokens: Int?, latencyMs: Int, error: String?, errorCode: String? = nil) {
         self.model = model
         self.response = response
         self.tokens = tokens
         self.latencyMs = latencyMs
         self.error = error
+        self.errorCode = errorCode
     }
 
     var hasError: Bool {
@@ -74,7 +77,8 @@ extension SavedModelResponse {
             response: response,
             tokens: tokens,
             latencyMs: latencyMs,
-            error: error
+            error: error,
+            errorCode: errorCode
         )
     }
 }
@@ -85,11 +89,13 @@ final class SavedConversationMessage {
     var modelId: String  // Which model this history is for
     var role: String     // "user" or "assistant"
     var content: String
+    var orderIndex: Int = 0
 
-    init(modelId: String, role: String, content: String) {
+    init(modelId: String, role: String, content: String, orderIndex: Int) {
         self.modelId = modelId
         self.role = role
         self.content = content
+        self.orderIndex = orderIndex
     }
 }
 
@@ -99,7 +105,7 @@ extension SavedConversationMessage {
         return Message(role: role, content: content)
     }
 
-    static func from(_ message: Message, modelId: String) -> SavedConversationMessage {
-        return SavedConversationMessage(modelId: modelId, role: message.role, content: message.content)
+    static func from(_ message: Message, modelId: String, order: Int) -> SavedConversationMessage {
+        return SavedConversationMessage(modelId: modelId, role: message.role, content: message.content, orderIndex: order)
     }
 }

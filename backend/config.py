@@ -23,6 +23,28 @@ class Config:
     CORS_ALLOWED_ORIGINS: str = os.getenv("CORS_ALLOWED_ORIGINS", "*")
     CORS_ALLOW_CREDENTIALS: bool = os.getenv("CORS_ALLOW_CREDENTIALS", "true").lower() == "true"
     CORO_API_TOKEN: Optional[str] = os.getenv("CORO_API_TOKEN")
+    REDIS_URL: Optional[str] = os.getenv("REDIS_URL")
+
+    # Rate limiting (requests per window seconds)
+    RATE_LIMITS = {
+        "anonymous": {
+            "limit": int(os.getenv("RATE_LIMIT_ANONYMOUS_LIMIT", "30")),
+            "window": int(os.getenv("RATE_LIMIT_ANONYMOUS_WINDOW", "60")),
+        },
+        "authenticated": {
+            "limit": int(os.getenv("RATE_LIMIT_AUTH_LIMIT", "60")),
+            "window": int(os.getenv("RATE_LIMIT_AUTH_WINDOW", "60")),
+        },
+        "premium": {
+            "limit": int(os.getenv("RATE_LIMIT_PREMIUM_LIMIT", "180")),
+            "window": int(os.getenv("RATE_LIMIT_PREMIUM_WINDOW", "60")),
+        },
+    }
+    PREMIUM_SESSION_TTL: int = int(os.getenv("PREMIUM_SESSION_TTL", "86400"))  # 24 hours
+
+    # Apple Sign-In
+    APPLE_CLIENT_ID: Optional[str] = os.getenv("APPLE_CLIENT_ID")
+    APPLE_SKIP_VERIFICATION: bool = os.getenv("APPLE_SKIP_VERIFICATION", "false").lower() == "true"
 
     # Model Configuration
     MODELS = {

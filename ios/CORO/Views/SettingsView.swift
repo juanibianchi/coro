@@ -4,6 +4,7 @@ struct SettingsView: View {
     @ObservedObject var apiService: APIService
     @Environment(\.dismiss) var dismiss
     @State private var editedURL: String = ""
+    @State private var editedToken: String = ""
     @State private var showingHealthStatus = false
     @State private var isHealthy = false
     @State private var isCheckingHealth = false
@@ -26,6 +27,10 @@ struct SettingsView: View {
                         }
                     }
 
+                    SecureField("API Token (optional)", text: $editedToken)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+
                     Button("Test Connection") {
                         testConnection()
                     }
@@ -33,13 +38,15 @@ struct SettingsView: View {
                 } header: {
                     Text("API Configuration")
                 } footer: {
-                    Text("The backend API endpoint URL. Default: http://localhost:8000")
+                    Text("The backend API endpoint URL. Default: https://coro-production.up.railway.app")
                 }
 
                 Section {
                     Button("Reset to Default") {
-                        editedURL = "http://localhost:8000"
+                        editedURL = "https://coro-production.up.railway.app"
+                        editedToken = ""
                         apiService.baseURL = editedURL
+                        apiService.apiToken = editedToken
                     }
                 }
 
@@ -77,20 +84,23 @@ struct SettingsView: View {
             }
             .onAppear {
                 editedURL = apiService.baseURL
+                editedToken = apiService.apiToken
             }
         }
     }
 
     private func saveSettings() {
         apiService.baseURL = editedURL
+        apiService.apiToken = editedToken
     }
 
     private func testConnection() {
         isCheckingHealth = true
         showingHealthStatus = false
 
-        // Save URL first
+        // Save URL and token first
         apiService.baseURL = editedURL
+        apiService.apiToken = editedToken
 
         Task {
             do {

@@ -32,57 +32,47 @@ struct ModelCard: View {
                 HStack {
                     Circle()
                         .fill(
-                            LinearGradient(
-                                colors: isSelected ? [Color(red: 0.95, green: 0.5, blue: 0.2), Color(red: 0.85, green: 0.4, blue: 0.3)] : [Color.gray.opacity(0.3)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
+                            isSelected ? AppTheme.Gradients.accent : LinearGradient(colors: [AppTheme.Colors.outline.opacity(0.4)], startPoint: .top, endPoint: .bottom)
                         )
                         .frame(width: 12, height: 12)
-                        .shadow(color: isSelected ? Color(red: 0.95, green: 0.5, blue: 0.2).opacity(0.4) : Color.clear, radius: 4, x: 0, y: 2)
+                        .shadow(color: isSelected ? AppTheme.Colors.accent.opacity(0.45) : Color.clear, radius: 4, x: 0, y: 2)
 
                     Spacer()
 
                     if isSelected {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.2))
+                            .foregroundColor(AppTheme.Colors.accent)
                             .font(.title3)
                     }
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(model.name)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(Color(red: 0.2, green: 0.15, blue: 0.1))
+                        .font(AppTheme.Typography.subtitle)
+                        .foregroundColor(AppTheme.Colors.textPrimary)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                         .frame(height: 40, alignment: .top)
 
                     Text(model.provider)
-                        .font(.system(size: 13))
-                        .foregroundColor(.secondary)
+                        .font(AppTheme.Typography.caption)
+                        .foregroundColor(AppTheme.Colors.textSecondary)
                 }
             }
             .frame(width: 160, height: 120)
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 18)
-                    .fill(.ultraThinMaterial)
+                    .fill(AppTheme.Colors.surfaceElevated)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 18)
                     .strokeBorder(
-                        LinearGradient(
-                            colors: isSelected ?
-                                [Color(red: 0.95, green: 0.5, blue: 0.2).opacity(0.6), Color(red: 0.85, green: 0.4, blue: 0.3).opacity(0.6)] :
-                                [Color.white.opacity(0.25)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
+                        isSelected ? AppTheme.Colors.accent.opacity(0.5) : AppTheme.Colors.outline.opacity(0.4),
                         lineWidth: 1.5
                     )
             )
-            .shadow(color: isSelected ? Color(red: 0.95, green: 0.5, blue: 0.2).opacity(0.2) : Color.black.opacity(0.08), radius: isSelected ? 15 : 10, x: 0, y: isSelected ? 8 : 5)
+            .shadow(color: isSelected ? AppTheme.Colors.accent.opacity(0.25) : Color.black.opacity(0.08), radius: isSelected ? 15 : 10, x: 0, y: isSelected ? 8 : 5)
             .scaleEffect(isSelected ? 1.02 : 1.0)
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
         }

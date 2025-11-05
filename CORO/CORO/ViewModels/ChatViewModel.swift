@@ -12,6 +12,7 @@ enum ViewState: Equatable {
 @MainActor
 class ChatViewModel: ObservableObject {
     @Published var prompt: String = ""
+    @Published var displayedPrompt: String = ""
     @Published var selectedModels: Set<String> = []
     @Published var availableModels: [ModelInfo] = []
     @Published var responses: [ModelResponse] = []
@@ -20,6 +21,11 @@ class ChatViewModel: ObservableObject {
     @Published var selectedTab: Int = 0
     @Published var conversationHistory: [String: [Message]] = [:]  // Per-model conversation history
 
+    // Model parameters
+    @Published var temperature: Double = 0.7
+    @Published var maxTokens: Int = 2000
+    @Published var topP: Double? = nil
+
     let apiService: APIService
     let mlxService: MLXService
     var modelContext: ModelContext?
@@ -27,13 +33,19 @@ class ChatViewModel: ObservableObject {
     // Caching
     private var lastPrompt: String = ""
     private var lastSelectedModels: Set<String> = []
+    private var isRestoringConversation = false
+    private var hasAutoSelectedFirstReadyResponse = false
+    private var activeConversation: Conversation?
 
     // On-device model IDs
     private let onDeviceModelIds = ["llama-3.2-1b-local"]
+    private let placeholderText = "Awaiting response..."
+    private let modelDisplayOrder = ["gemini", "llama-70b", "llama-8b", "mixtral", "deepseek", "llama-3.2-1b-local"]
+    private let pendingAssistantPlaceholder = Message.pendingAssistantPlaceholder
 
-    init(apiService: APIService = APIService(), mlxService: MLXService = MLXService()) {
-        self.apiService = apiService
-        self.mlxService = mlxService
+    init(apiService: APIService? = nil, mlxService: MLXService? = nil) {
+        self.apiService = apiService ?? APIService()
+        self.mlxService = mlxService ?? MLXService()
         loadDefaultModels()
     }
 
@@ -53,18 +65,18 @@ class ChatViewModel: ObservableObject {
             models.append(onDeviceModel)
 
             // Sort models by a predefined order to keep consistency
-            let modelOrder = ["gemini", "llama-70b", "llama-8b", "mixtral", "deepseek", "llama-3.2-1b-local"]
             models.sort { model1, model2 in
-                let index1 = modelOrder.firstIndex(of: model1.id) ?? Int.max
-                let index2 = modelOrder.firstIndex(of: model2.id) ?? Int.max
+                let index1 = modelDisplayOrder.firstIndex(of: model1.id) ?? Int.max
+                let index2 = modelDisplayOrder.firstIndex(of: model2.id) ?? Int.max
                 return index1 < index2
             }
 
             self.availableModels = models
 
-            // Select all free models by default if no selection
+            // Select free cloud models by default if no selection
             if selectedModels.isEmpty {
-                selectedModels = Set(models.filter { !$0.isPremium }.map { $0.id })
+                let defaultModels = models.filter { !$0.isPremium && !onDeviceModelIds.contains($0.id) }
+                selectedModels = Set(defaultModels.map { $0.id })
             }
         } catch {
             print("Failed to load models: \(error)")
@@ -83,14 +95,16 @@ class ChatViewModel: ObservableObject {
             ModelInfo(id: "llama-3.2-1b-local", name: "Llama 3.2 1B (On-Device)", provider: "Local", cost: "free")
         ]
 
-        // Select all by default
-        selectedModels = Set(availableModels.map { $0.id })
+        // Select cloud models by default
+        selectedModels = Set(availableModels.filter { !onDeviceModelIds.contains($0.id) }.map { $0.id })
     }
 
     // MARK: - Send Chat Request
 
     func sendChatRequest() async {
-        guard !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        let trimmedPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !trimmedPrompt.isEmpty else {
             viewState = .error("Please enter a prompt")
             return
         }
@@ -100,8 +114,8 @@ class ChatViewModel: ObservableObject {
             return
         }
 
-        // Check cache - if same prompt and models, reuse existing responses
-        if prompt == lastPrompt && selectedModels == lastSelectedModels && !responses.isEmpty {
+        if trimmedPrompt == lastPrompt && selectedModels == lastSelectedModels && !responses.isEmpty {
+            displayedPrompt = trimmedPrompt
             viewState = .success
             return
         }
@@ -109,69 +123,187 @@ class ChatViewModel: ObservableObject {
         viewState = .loading
         responses = []
         selectedTab = 0
+        hasAutoSelectedFirstReadyResponse = false
+
+        let models = orderedModelIds(from: Array(selectedModels))
+        let historySnapshots = models.reduce(into: [String: [Message]]()) { result, modelId in
+            result[modelId] = conversationHistory[modelId] ?? []
+        }
+        let overridesDictionary = apiService.modelAPIKeys.overridesDictionary
+
+        displayedPrompt = trimmedPrompt
+        prompt = ""
+
+        // Seed placeholders
+        responses = models.map { modelId in
+            ModelResponse(
+                model: modelId,
+                response: placeholderText,
+                tokens: nil,
+                latencyMs: 0,
+                error: nil,
+                errorCode: nil
+            )
+        }
+        totalLatency = 0
+
+        // Append user prompt to conversation history snapshot
+        for modelId in models {
+            if conversationHistory[modelId] == nil {
+                conversationHistory[modelId] = []
+            }
+            conversationHistory[modelId]?.append(Message(role: "user", content: trimmedPrompt))
+            conversationHistory[modelId]?.append(Message(role: "assistant", content: pendingAssistantPlaceholder))
+        }
+
+        // Transition to results view immediately
+        viewState = .success
+
+        let temperatureValue = temperature
+        let maxTokensValue = maxTokens
+        let topPValue = topP
+        let overallStart = Date()
+
+        lastPrompt = trimmedPrompt
+        lastSelectedModels = selectedModels
+
+        await withTaskGroup(of: (String, Result<ModelResponse, Error>).self) { group in
+            for modelId in models {
+                if onDeviceModelIds.contains(modelId) {
+                    let history = historySnapshots[modelId] ?? []
+                    group.addTask {
+                        do {
+                            let response = try await self.mlxService.generate(
+                                prompt: trimmedPrompt,
+                                temperature: Float(temperatureValue),
+                                maxTokens: maxTokensValue,
+                                conversationHistory: history
+                            )
+                            return (modelId, .success(response))
+                        } catch {
+                            return (modelId, .failure(error))
+                        }
+                    }
+                } else {
+                    let history = historySnapshots[modelId] ?? []
+                    group.addTask {
+                        do {
+                            let conversationPayload = history.isEmpty ? nil : [modelId: history]
+                            let request = ChatRequest(
+                                prompt: trimmedPrompt,
+                                models: [modelId],
+                                temperature: temperatureValue,
+                                maxTokens: maxTokensValue,
+                                topP: topPValue,
+                                conversationHistory: conversationPayload,
+                                apiOverrides: overridesDictionary.isEmpty ? nil : overridesDictionary
+                            )
+
+                            let result = try await self.apiService.sendChatRequest(request)
+                            guard let response = result.responses.first else {
+                                throw NSError(domain: "ChatViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Empty response"])
+                            }
+                            return (modelId, .success(response))
+                        } catch {
+                            return (modelId, .failure(error))
+                        }
+                    }
+                }
+            }
+
+            for await (modelId, result) in group {
+                switch result {
+                case .success(let response):
+                    if let index = responses.firstIndex(where: { $0.model == modelId }) {
+                        responses[index] = response
+                    } else {
+                        responses.append(response)
+                    }
+                    selectFirstAvailableResponseIfNeeded()
+
+                    if response.error == nil {
+                        replacePendingAssistantMessage(for: modelId, with: response.response)
+                    } else {
+                        replacePendingAssistantMessage(for: modelId, with: response.userFriendlyError)
+                    }
+
+                    totalLatency = max(totalLatency, response.latencyMs)
+
+                case .failure(let error):
+                    if let index = responses.firstIndex(where: { $0.model == modelId }) {
+                        responses[index] = ModelResponse(
+                            model: modelId,
+                            response: "",
+                            tokens: nil,
+                            latencyMs: 0,
+                            error: error.localizedDescription,
+                            errorCode: "unknown_error"
+                        )
+                    }
+                    selectFirstAvailableResponseIfNeeded()
+                    replacePendingAssistantMessage(for: modelId, with: ErrorCodeHelper.getUserFriendlyMessage(for: "unknown_error", originalMessage: error.localizedDescription))
+
+                    totalLatency = max(totalLatency, Int(Date().timeIntervalSince(overallStart) * 1000))
+                }
+            }
+        }
+
+        let elapsedMs = Int(Date().timeIntervalSince(overallStart) * 1000)
+        totalLatency = max(totalLatency, elapsedMs)
+
+        saveConversation()
+
+        // Haptic feedback once all models completed
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
+    }
+
+    // MARK: - Retry Failed Model
+
+    func retryFailedModel(_ modelId: String) async {
+        guard let failedResponse = responses.first(where: { $0.model == modelId && $0.hasError }) else {
+            return
+        }
+
+        // Find the index of the failed response
+        guard let index = responses.firstIndex(where: { $0.id == failedResponse.id }) else {
+            return
+        }
 
         do {
-            // Separate cloud and on-device models
-            let cloudModels = selectedModels.filter { !onDeviceModelIds.contains($0) }
-            let localModels = selectedModels.filter { onDeviceModelIds.contains($0) }
+            // Get conversation history for this model
+            let history = conversationHistory[modelId] ?? []
+            let overrides = apiService.modelAPIKeys.overridesDictionary
 
-            var allResponses: [ModelResponse] = []
-            let overallStart = Date()
+            // Send request to the failed model
+            let request = ChatRequest(
+                prompt: displayedPrompt,
+                models: [modelId],
+                temperature: temperature,
+                maxTokens: maxTokens,
+                topP: topP,
+                conversationHistory: history.isEmpty ? nil : [modelId: history],
+                apiOverrides: overrides.isEmpty ? nil : overrides
+            )
 
-            // Process cloud models via API
-            if !cloudModels.isEmpty {
-                let request = ChatRequest(
-                    prompt: prompt,
-                    models: Array(cloudModels),
-                    conversationHistory: conversationHistory.isEmpty ? nil : conversationHistory
-                )
+            let result = try await apiService.sendChatRequest(request)
 
-                let result = try await apiService.sendChatRequest(request)
-                allResponses.append(contentsOf: result.responses)
-            }
+            if let newResponse = result.responses.first {
+                // Replace the failed response with the new one
+                responses[index] = newResponse
 
-            // Process on-device models via MLX
-            for modelId in localModels {
-                let history = conversationHistory[modelId] ?? []
-                let response = try await mlxService.generate(
-                    prompt: prompt,
-                    temperature: 0.7,
-                    maxTokens: 512,
-                    conversationHistory: history
-                )
-                allResponses.append(response)
-            }
-
-            let totalLatency = Int(Date().timeIntervalSince(overallStart) * 1000)
-
-            self.responses = allResponses
-            self.totalLatency = totalLatency
-            self.viewState = .success
-
-            // Update conversation history for each model
-            for response in allResponses where response.error == nil {
-                // Initialize history if needed
-                if conversationHistory[response.model] == nil {
-                    conversationHistory[response.model] = []
+                // Update conversation history if successful
+                if !newResponse.hasError {
+                    conversationHistory[modelId]?.append(Message(role: "assistant", content: newResponse.response))
                 }
 
-                // Add user message
-                conversationHistory[response.model]?.append(Message(role: "user", content: prompt))
-
-                // Add assistant response
-                conversationHistory[response.model]?.append(Message(role: "assistant", content: response.response))
+                // Haptic feedback
+                let generator = UINotificationFeedbackGenerator()
+                generator.notificationOccurred(newResponse.hasError ? .warning : .success)
             }
 
-            // Update cache
-            lastPrompt = prompt
-            lastSelectedModels = selectedModels
-
-            // Haptic feedback
-            let generator = UINotificationFeedbackGenerator()
-            generator.notificationOccurred(.success)
-
         } catch {
-            viewState = .error(error.localizedDescription)
+            print("Retry failed: \(error)")
 
             // Haptic feedback for error
             let generator = UINotificationFeedbackGenerator()
@@ -236,20 +368,95 @@ class ChatViewModel: ObservableObject {
     }
 
     func getModelColor(_ modelId: String) -> Color {
-        switch modelId {
-        case "gemini":
-            return Color.green
-        case "llama-70b":
-            return Color.blue
-        case "llama-8b":
-            return Color.purple
-        case "mixtral":
-            return Color.orange
-        case "deepseek":
-            return Color.cyan
-        default:
-            return Color.gray
+        AppTheme.Colors.modelAccent(for: modelId)
+    }
+
+    private func orderedModelIds(from models: [String]) -> [String] {
+        var ordered = availableModels.map(\.id).filter { models.contains($0) }
+
+        // Append any models not present in availableModels (fallback)
+        let remaining = models.filter { !ordered.contains($0) }
+        if !remaining.isEmpty {
+            ordered.append(contentsOf: remaining.sorted())
         }
+
+        return ordered
+    }
+
+    private func selectFirstAvailableResponseIfNeeded() {
+        guard !hasAutoSelectedFirstReadyResponse else { return }
+
+        if !responses.indices.contains(selectedTab) {
+            if let firstReady = responses.firstIndex(where: { $0.response != placeholderText || $0.hasError }) {
+                selectedTab = firstReady
+                hasAutoSelectedFirstReadyResponse = true
+            }
+            return
+        }
+
+        let currentResponse = responses[selectedTab]
+        if currentResponse.response == placeholderText {
+            if let firstSuccess = responses.firstIndex(where: { $0.response != placeholderText && !$0.hasError }) {
+                selectedTab = firstSuccess
+                hasAutoSelectedFirstReadyResponse = true
+            } else if let firstResolved = responses.firstIndex(where: { $0.response != placeholderText || $0.hasError }) {
+                selectedTab = firstResolved
+                hasAutoSelectedFirstReadyResponse = true
+            }
+        }
+    }
+
+    private func replacePendingAssistantMessage(for modelId: String, with content: String) {
+        guard var messages = conversationHistory[modelId] else { return }
+
+        if let index = messages.lastIndex(where: { $0.content == pendingAssistantPlaceholder }) {
+            messages[index] = Message(role: "assistant", content: content)
+        } else {
+            messages.append(Message(role: "assistant", content: content))
+        }
+
+        conversationHistory[modelId] = messages
+    }
+
+    private func shouldAutoRetry(_ response: ModelResponse) -> Bool {
+        guard response.hasError else { return false }
+
+        if let code = response.errorCode?.lowercased(),
+           ["authentication_failed", "api_key_missing", "api_key_invalid", "unauthorized"].contains(code) {
+            return true
+        }
+
+        let message = response.error?.lowercased() ?? ""
+        return message.contains("unauthorized") || message.contains("authentication") || message.contains("api key")
+    }
+
+    private func hasCredentialChanges() -> Bool {
+        !apiService.apiToken.isEmpty || apiService.modelAPIKeys.hasAnyKeys
+    }
+
+    private func autoRetryRecoverableErrorsIfPossible() async {
+        guard hasCredentialChanges() else { return }
+
+        let recoverable = responses.filter { shouldAutoRetry($0) }
+        guard !recoverable.isEmpty else { return }
+
+        for response in recoverable {
+            await retryFailedModel(response.model)
+        }
+
+        await MainActor.run {
+            saveConversation()
+        }
+    }
+
+    func returnToPrompt() {
+        viewState = .idle
+        prompt = ""
+        displayedPrompt = ""
+        responses = []
+        totalLatency = 0
+        hasAutoSelectedFirstReadyResponse = false
+        conversationHistory = [:]
     }
 
     var canSubmit: Bool {
@@ -261,7 +468,13 @@ class ChatViewModel: ObservableObject {
     func saveConversation() {
         guard let modelContext = modelContext,
               !responses.isEmpty,
-              !prompt.isEmpty else { return }
+              !displayedPrompt.isEmpty,
+              !isRestoringConversation else { return }
+
+        // Avoid saving placeholder-only conversations
+        guard responses.contains(where: { $0.response != placeholderText || $0.hasError }) else {
+            return
+        }
 
         let chatResponse = ChatResponse(
             responses: responses,
@@ -270,9 +483,15 @@ class ChatViewModel: ObservableObject {
 
         // Convert conversation history to saved format
         var savedMessages: [SavedConversationMessage] = []
-        for (modelId, messages) in conversationHistory {
+        var messageOrder = 0
+        for modelId in conversationHistory.keys.sorted() {
+            guard let messages = conversationHistory[modelId] else { continue }
             for message in messages {
-                savedMessages.append(SavedConversationMessage.from(message, modelId: modelId))
+                if message.isPendingAssistant {
+                    continue
+                }
+                savedMessages.append(SavedConversationMessage.from(message, modelId: modelId, order: messageOrder))
+                messageOrder += 1
             }
         }
 
@@ -286,13 +505,24 @@ class ChatViewModel: ObservableObject {
             )
         }
 
-        let conversation = Conversation(
-            prompt: prompt,
-            totalLatency: totalLatency,
-            responses: savedResponses,
-            conversationHistory: savedMessages
-        )
-        modelContext.insert(conversation)
+        let conversation: Conversation
+        if let existing = activeConversation {
+            existing.prompt = displayedPrompt
+            existing.totalLatency = totalLatency
+            existing.responses = savedResponses
+            existing.conversationHistory = savedMessages
+            conversation = existing
+        } else {
+            let newConversation = Conversation(
+                prompt: displayedPrompt,
+                totalLatency: totalLatency,
+                responses: savedResponses,
+                conversationHistory: savedMessages
+            )
+            modelContext.insert(newConversation)
+            activeConversation = newConversation
+            conversation = newConversation
+        }
 
         do {
             try modelContext.save()
@@ -303,15 +533,37 @@ class ChatViewModel: ObservableObject {
     }
 
     func loadConversation(_ conversation: Conversation) {
-        self.prompt = conversation.prompt
-        self.responses = conversation.responses.map { $0.toModelResponse() }
+        isRestoringConversation = true
+        defer { isRestoringConversation = false }
+
+        let savedResponses = conversation.responses.map { $0.toModelResponse() }
+        let responseModels = savedResponses.map { $0.model }
+        let orderedModels = orderedModelIds(from: responseModels)
+
+        self.prompt = ""
+        self.displayedPrompt = conversation.prompt
+        self.responses = orderedModels.compactMap { modelId in
+            savedResponses.first(where: { $0.model == modelId })
+        }
+        self.selectedModels = Set(orderedModels)
         self.totalLatency = conversation.totalLatency
         self.viewState = .success
         self.selectedTab = 0
+        hasAutoSelectedFirstReadyResponse = false
+        selectFirstAvailableResponseIfNeeded()
+        hasAutoSelectedFirstReadyResponse = true
+        activeConversation = conversation
 
         // Restore conversation history from saved messages
         var restoredHistory: [String: [Message]] = [:]
-        for savedMessage in conversation.conversationHistory {
+        let historyCollection = conversation.conversationHistory
+        let sortedHistory: [SavedConversationMessage]
+        if historyCollection.allSatisfy({ $0.orderIndex == 0 }) {
+            sortedHistory = Array(historyCollection)
+        } else {
+            sortedHistory = historyCollection.sorted { $0.orderIndex < $1.orderIndex }
+        }
+        for savedMessage in sortedHistory {
             let message = savedMessage.toMessage()
             if restoredHistory[savedMessage.modelId] == nil {
                 restoredHistory[savedMessage.modelId] = []
@@ -325,26 +577,44 @@ class ChatViewModel: ObservableObject {
         // Update cache when loading conversation
         lastPrompt = conversation.prompt
         lastSelectedModels = selectedModels
+
+        Task {
+            await autoRetryRecoverableErrorsIfPossible()
+        }
     }
 
     func startNewChat() {
         prompt = ""
+        displayedPrompt = ""
         responses = []
         viewState = .idle
         selectedTab = 0
+        totalLatency = 0
         conversationHistory = [:]
+        activeConversation = nil
 
         // Clear cache
         lastPrompt = ""
         lastSelectedModels = []
+        hasAutoSelectedFirstReadyResponse = false
     }
 
     // MARK: - Follow-up Messages
 
     func sendFollowUpMessage(to modelId: String, message: String) async {
-        guard !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
             return
         }
+
+        if conversationHistory[modelId] == nil {
+            conversationHistory[modelId] = []
+        }
+
+        var historyForRequest = conversationHistory[modelId] ?? []
+        historyForRequest.append(Message(role: "user", content: trimmed))
+        conversationHistory[modelId] = historyForRequest
+        conversationHistory[modelId]?.append(Message(role: "assistant", content: pendingAssistantPlaceholder))
 
         // Create a temporary loading state for this model
         if let index = responses.firstIndex(where: { $0.model == modelId }) {
@@ -355,7 +625,8 @@ class ChatViewModel: ObservableObject {
                 response: updatedResponse.response,
                 tokens: updatedResponse.tokens,
                 latencyMs: updatedResponse.latencyMs,
-                error: nil
+                error: nil,
+                errorCode: nil
             )
         }
 
@@ -365,9 +636,9 @@ class ChatViewModel: ObservableObject {
             // Check if this is an on-device model
             if onDeviceModelIds.contains(modelId) {
                 // Use MLX service for on-device model
-                let history = conversationHistory[modelId] ?? []
+                let history = historyForRequest
                 newResponse = try await mlxService.generate(
-                    prompt: message,
+                    prompt: trimmed,
                     temperature: 0.7,
                     maxTokens: 512,
                     conversationHistory: history
@@ -375,14 +646,17 @@ class ChatViewModel: ObservableObject {
             } else {
                 // Use API service for cloud models
                 var historyForModel: [String: [Message]] = [:]
-                if let history = conversationHistory[modelId] {
-                    historyForModel[modelId] = history
-                }
+                historyForModel[modelId] = historyForRequest
 
+                let overrides = apiService.modelAPIKeys.overridesDictionary
                 let request = ChatRequest(
-                    prompt: message,
+                    prompt: trimmed,
                     models: [modelId],
-                    conversationHistory: historyForModel.isEmpty ? nil : historyForModel
+                    temperature: temperature,
+                    maxTokens: maxTokens,
+                    topP: topP,
+                    conversationHistory: historyForModel.isEmpty ? nil : historyForModel,
+                    apiOverrides: overrides.isEmpty ? nil : overrides
                 )
 
                 let result = try await apiService.sendChatRequest(request)
@@ -398,19 +672,13 @@ class ChatViewModel: ObservableObject {
             }
 
             // Update conversation history
-            if conversationHistory[modelId] == nil {
-                conversationHistory[modelId] = []
-            }
-
-            conversationHistory[modelId]?.append(Message(role: "user", content: message))
-
-            if newResponse.error == nil {
-                conversationHistory[modelId]?.append(Message(role: "assistant", content: newResponse.response))
-            }
+            replacePendingAssistantMessage(for: modelId, with: newResponse.error == nil ? newResponse.response : newResponse.userFriendlyError)
 
             // Haptic feedback
             let generator = UINotificationFeedbackGenerator()
             generator.notificationOccurred(.success)
+
+            saveConversation()
 
         } catch {
             // Handle error
@@ -420,16 +688,38 @@ class ChatViewModel: ObservableObject {
                     response: responses[index].response,
                     tokens: nil,
                     latencyMs: 0,
-                    error: error.localizedDescription
+                    error: error.localizedDescription,
+                    errorCode: "unknown_error"
                 )
             }
 
+            replacePendingAssistantMessage(for: modelId, with: ErrorCodeHelper.getUserFriendlyMessage(for: "unknown_error", originalMessage: error.localizedDescription))
+
             let generator = UINotificationFeedbackGenerator()
             generator.notificationOccurred(.error)
+
+            saveConversation()
         }
     }
 
     func getConversationMessages(for modelId: String) -> [Message] {
         return conversationHistory[modelId] ?? []
+    }
+
+    func sendFollowUpToAllModels(message: String, excluding excludedModelId: String? = nil) async {
+        let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        let targetResponses = responses.filter { response in
+            response.model != excludedModelId
+        }
+
+        await withTaskGroup(of: Void.self) { group in
+            for response in targetResponses {
+                group.addTask {
+                    await self.sendFollowUpMessage(to: response.model, message: trimmed)
+                }
+            }
+        }
     }
 }

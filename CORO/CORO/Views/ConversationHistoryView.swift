@@ -11,7 +11,7 @@ struct ConversationHistoryView: View {
         NavigationStack {
             ZStack {
                 // Background
-                Color(red: 0.99, green: 0.96, blue: 0.92)
+                AppTheme.Colors.background
                     .ignoresSafeArea()
 
                 if conversations.isEmpty {
@@ -19,23 +19,16 @@ struct ConversationHistoryView: View {
                     VStack(spacing: 24) {
                         Image(systemName: "clock.badge.questionmark")
                             .font(.system(size: 64))
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [Color(red: 0.95, green: 0.5, blue: 0.2), Color(red: 0.85, green: 0.4, blue: 0.3)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
+                            .foregroundStyle(AppTheme.Gradients.accent)
 
                         VStack(spacing: 8) {
                             Text("No History Yet")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundColor(Color(red: 0.2, green: 0.15, blue: 0.1))
+                                .font(AppTheme.Typography.title)
+                                .foregroundColor(AppTheme.Colors.textPrimary)
 
                             Text("Your conversation history will appear here")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .font(AppTheme.Typography.body)
+                                .foregroundColor(AppTheme.Colors.textSecondary)
                                 .multilineTextAlignment(.center)
                         }
                     }
@@ -75,7 +68,7 @@ struct ConversationHistoryView: View {
                             Image(systemName: "xmark")
                                 .font(.body.weight(.semibold))
                         }
-                        .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.2))
+                        .foregroundColor(AppTheme.Colors.accent)
                     }
                 }
 
@@ -114,20 +107,17 @@ struct ConversationRowView: View {
         VStack(alignment: .leading, spacing: 12) {
             // Header
             HStack {
-                Text(conversation.timestamp, style: .date)
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.secondary)
-                    .textCase(.uppercase)
-                    .tracking(0.5)
-
-                Text("•")
-                    .font(.caption2)
-                    .foregroundColor(.secondary.opacity(0.5))
-
-                Text(conversation.timestamp, style: .time)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                Text(
+                    conversation.timestamp.formatted(
+                        .dateTime
+                            .month(.abbreviated)
+                            .day()
+                            .hour(.twoDigits(amPM: .abbreviated))
+                            .minute()
+                    )
+                )
+                    .font(AppTheme.Typography.caption)
+                    .foregroundColor(AppTheme.Colors.textSecondary)
 
                 Spacer()
 
@@ -138,13 +128,13 @@ struct ConversationRowView: View {
                         .font(.caption)
                         .fontWeight(.medium)
                 }
-                .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.2))
+                .foregroundColor(AppTheme.Colors.accent)
             }
 
             // Prompt Preview
             Text(conversation.prompt)
-                .font(.system(size: 15, weight: .medium))
-                .foregroundColor(Color(red: 0.2, green: 0.15, blue: 0.1))
+                .font(AppTheme.Typography.body)
+                .foregroundColor(AppTheme.Colors.textPrimary)
                 .lineLimit(2)
                 .lineSpacing(4)
 
@@ -153,19 +143,19 @@ struct ConversationRowView: View {
                 ForEach(conversation.responses.prefix(3), id: \.model) { response in
                     HStack(spacing: 4) {
                         Circle()
-                            .fill(response.hasError ? Color.orange : Color(red: 0.95, green: 0.5, blue: 0.2))
+                            .fill(response.hasError ? AppTheme.Colors.warning : AppTheme.Colors.modelAccent(for: response.model))
                             .frame(width: 6, height: 6)
 
                         Text(modelDisplayName(response.model))
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
+                            .font(AppTheme.Typography.caption)
+                            .foregroundColor(AppTheme.Colors.textSecondary)
                     }
                 }
 
                 if conversation.responses.count > 3 {
                     Text("+\(conversation.responses.count - 3)")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .font(AppTheme.Typography.caption)
+                        .foregroundColor(AppTheme.Colors.textSecondary)
                 }
             }
         }
@@ -173,11 +163,11 @@ struct ConversationRowView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(.ultraThinMaterial)
+                .fill(AppTheme.Colors.surfaceElevated)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .strokeBorder(Color.white.opacity(0.3), lineWidth: 1)
+                .strokeBorder(AppTheme.Colors.outline.opacity(0.4), lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
     }

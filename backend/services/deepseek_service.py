@@ -6,6 +6,7 @@ import httpx
 from backend.config import config
 from backend.models.schemas import ModelResponse
 from backend.utils.performance import get_http_client, with_retry
+from backend.models.error_codes import ErrorCode, categorize_error
 
 
 class DeepSeekService:
@@ -14,7 +15,7 @@ class DeepSeekService:
     def __init__(self):
         """Initialize DeepSeek service."""
         self.api_url = config.DEEPSEEK_API_URL
-        self.api_key = config.DEEPSEEK_API_KEY
+        self.default_api_key = config.DEEPSEEK_API_KEY
         self.model_name = config.MODELS["deepseek"]["model_name"]
 
     @with_retry(max_attempts=3, min_wait=1.0, max_wait=10.0)
@@ -51,15 +52,18 @@ class DeepSeekService:
         prompt: str,
         temperature: float = 0.7,
         max_tokens: int = 512,
-        conversation_history: list = None
+        top_p: Optional[float] = None,
+        conversation_history: list = None,
+        api_key_override: Optional[str] = None
     ) -> ModelResponse:
         """
         Generate a response using DeepSeek API with connection pooling and retry logic.
 
         Args:
             prompt: The input prompt
-            temperature: Temperature for generation (0.0-1.0)
-            max_tokens: Maximum tokens to generate
+            temperature: Temperature for generation (0.0-2.0)
+            max_tokens: Maximum tokens to generate (1-32000)
+            top_p: Nucleus sampling parameter (0.0-1.0, optional)
             conversation_history: Optional list of previous messages
 
         Returns:
@@ -68,7 +72,8 @@ class DeepSeekService:
         start_time = time.time()
 
         try:
-            if not self.api_key:
+            api_key = api_key_override or self.default_api_key
+            if not api_key:
                 raise ValueError("DeepSeek API key not configured")
 
             # Build messages array from conversation history
@@ -94,9 +99,13 @@ class DeepSeekService:
                 "max_tokens": max_tokens
             }
 
+            # Add top_p if provided
+            if top_p is not None:
+                payload["top_p"] = top_p
+
             # Prepare headers
             headers = {
-                "Authorization": f"Bearer {self.api_key}",
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"
             }
 
@@ -119,29 +128,43 @@ class DeepSeekService:
                 response=text,
                 tokens=tokens,
                 latency_ms=latency_ms,
-                error=None
+                error=None,
+                error_code=None
             )
 
         except httpx.HTTPStatusError as e:
             latency_ms = int((time.time() - start_time) * 1000)
             error_msg = f"HTTP {e.response.status_code}: {e.response.text}"
 
+            # Categorize based on HTTP status code
+            if e.response.status_code == 401:
+                error_code = ErrorCode.AUTHENTICATION_FAILED
+            elif e.response.status_code == 429:
+                error_code = ErrorCode.RATE_LIMITED
+            elif e.response.status_code in [502, 503, 504]:
+                error_code = ErrorCode.SERVICE_UNAVAILABLE
+            else:
+                error_code = categorize_error(e)
+
             return ModelResponse(
                 model="deepseek",
                 response="",
                 tokens=None,
                 latency_ms=latency_ms,
-                error=error_msg
+                error=error_msg,
+                error_code=error_code.value
             )
 
         except Exception as e:
             latency_ms = int((time.time() - start_time) * 1000)
             error_msg = str(e)
+            error_code = categorize_error(e)
 
             return ModelResponse(
                 model="deepseek",
                 response="",
                 tokens=None,
                 latency_ms=latency_ms,
-                error=error_msg
+                error=error_msg,
+                error_code=error_code.value
             )

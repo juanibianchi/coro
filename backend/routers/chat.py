@@ -20,6 +20,8 @@ from backend.config import config
 from backend.services.gemini_service import GeminiService
 from backend.services.groq_service import GroqService
 from backend.services.deepseek_service import DeepSeekService
+from backend.models.error_codes import ErrorCode
+from backend.services.rate_limiter import enforce_rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +97,11 @@ async def list_models() -> ModelsResponse:
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest, _: None = Depends(require_api_token)) -> ChatResponse:
+async def chat(
+    request: ChatRequest,
+    _: None = Depends(require_api_token),
+    __: None = Depends(enforce_rate_limit),
+) -> ChatResponse:
     """
     Send prompt to multiple models in parallel.
 
@@ -117,6 +123,8 @@ async def chat(request: ChatRequest, _: None = Depends(require_api_token)) -> Ch
             detail=f"Invalid model IDs: {', '.join(invalid_models)}"
         )
 
+    override_keys = request.api_overrides or {}
+
     # Create tasks for parallel execution
     tasks = []
     for model_id in request.models:
@@ -130,7 +138,9 @@ async def chat(request: ChatRequest, _: None = Depends(require_api_token)) -> Ch
             request.prompt,
             request.temperature,
             request.max_tokens,
-            history
+            request.top_p,
+            history,
+            override_keys.get(model_id)
         )
         tasks.append(task)
 
@@ -155,7 +165,8 @@ async def chat(request: ChatRequest, _: None = Depends(require_api_token)) -> Ch
 async def chat_single(
     model_id: str,
     request: SingleChatRequest,
-    _: None = Depends(require_api_token)
+    _: None = Depends(require_api_token),
+    __: None = Depends(enforce_rate_limit),
 ) -> ModelResponse:
     """
     Send prompt to a single model.
@@ -179,7 +190,8 @@ async def chat_single(
         model_id,
         request.prompt,
         request.temperature,
-        request.max_tokens
+        request.max_tokens,
+        request.top_p
     )
 
     return response
@@ -190,7 +202,9 @@ async def _generate_for_model(
     prompt: str,
     temperature: float,
     max_tokens: int,
-    conversation_history: List = None
+    top_p: Optional[float] = None,
+    conversation_history: List = None,
+    api_key_override: Optional[str] = None,
 ) -> ModelResponse:
     """
     Generate a response for a specific model.
@@ -200,6 +214,7 @@ async def _generate_for_model(
         prompt: The prompt to send
         temperature: Temperature for generation
         max_tokens: Maximum tokens to generate
+        top_p: Nucleus sampling parameter (optional)
         conversation_history: Optional list of previous messages
 
     Returns:
@@ -210,13 +225,35 @@ async def _generate_for_model(
 
     try:
         if model_id == "gemini":
-            return await gemini_service.generate(prompt, temperature, max_tokens, conversation_history)
+            return await gemini_service.generate(
+                prompt,
+                temperature,
+                max_tokens,
+                top_p,
+                conversation_history,
+                api_key_override=api_key_override,
+            )
 
         elif model_id in ["llama-70b", "llama-8b", "mixtral"]:
-            return await groq_service.generate(model_id, prompt, temperature, max_tokens, conversation_history)
+            return await groq_service.generate(
+                model_id,
+                prompt,
+                temperature,
+                max_tokens,
+                top_p,
+                conversation_history,
+                api_key_override=api_key_override,
+            )
 
         elif model_id == "deepseek":
-            return await deepseek_service.generate(prompt, temperature, max_tokens, conversation_history)
+            return await deepseek_service.generate(
+                prompt,
+                temperature,
+                max_tokens,
+                top_p,
+                conversation_history,
+                api_key_override=api_key_override,
+            )
 
         else:
             # This should never happen due to validation, but just in case
@@ -225,7 +262,8 @@ async def _generate_for_model(
                 response="",
                 tokens=None,
                 latency_ms=0,
-                error=f"Unknown model: {model_id}"
+                error=f"Unknown model: {model_id}",
+                error_code=ErrorCode.INVALID_MODEL.value
             )
 
     except Exception as e:
@@ -235,5 +273,6 @@ async def _generate_for_model(
             response="",
             tokens=None,
             latency_ms=0,
-            error=f"Unexpected error: {str(e)}"
+            error=f"Unexpected error: {str(e)}",
+            error_code=ErrorCode.INTERNAL_ERROR.value
         )

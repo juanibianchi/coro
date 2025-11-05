@@ -11,7 +11,7 @@ struct SidebarView: View {
     var body: some View {
         ZStack {
             // Background
-            Color(red: 0.99, green: 0.96, blue: 0.92)
+            AppTheme.Colors.surface
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -19,26 +19,10 @@ struct SidebarView: View {
                 VStack(spacing: 16) {
                     HStack {
                         Text("CORO")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [Color(red: 0.95, green: 0.5, blue: 0.2), Color(red: 0.85, green: 0.4, blue: 0.3)],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
+                            .font(AppTheme.Typography.title)
+                            .foregroundStyle(AppTheme.Gradients.accent)
 
                         Spacer()
-
-                        Button {
-                            isPresented = false
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.title3)
-                                .foregroundColor(.secondary)
-                                .symbolRenderingMode(.hierarchical)
-                        }
                     }
 
                     // New Chat Button
@@ -50,34 +34,28 @@ struct SidebarView: View {
                             Image(systemName: "square.and.pencil")
                                 .font(.system(size: 16, weight: .semibold))
                             Text("New Chat")
-                                .font(.system(size: 16, weight: .semibold))
+                                .font(AppTheme.Typography.subtitle)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(
-                            LinearGradient(
-                                colors: [Color(red: 0.95, green: 0.5, blue: 0.2), Color(red: 0.85, green: 0.4, blue: 0.3)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
+                        .background(AppTheme.Gradients.accent)
                         .foregroundColor(.white)
                         .cornerRadius(12)
                     }
                 }
                 .padding(20)
-                .background(.regularMaterial)
+                .background(AppTheme.Colors.surfaceElevated)
 
                 // Conversations List
                 if conversations.isEmpty {
                     VStack(spacing: 16) {
                         Image(systemName: "bubble.left.and.bubble.right")
                             .font(.system(size: 48))
-                            .foregroundColor(.secondary.opacity(0.5))
+                            .foregroundColor(AppTheme.Colors.textSecondary.opacity(0.6))
 
                         Text("No conversations yet")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .font(AppTheme.Typography.caption)
+                            .foregroundColor(AppTheme.Colors.textSecondary)
                     }
                     .frame(maxHeight: .infinity)
                 } else {
@@ -118,35 +96,34 @@ struct SidebarConversationRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(conversation.prompt)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(Color(red: 0.2, green: 0.15, blue: 0.1))
+                .font(AppTheme.Typography.body)
+                .foregroundColor(AppTheme.Colors.textPrimary)
                 .lineLimit(2)
 
             HStack(spacing: 8) {
                 Image(systemName: "clock")
                     .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppTheme.Colors.textSecondary)
 
                 Text(conversation.timestamp, style: .relative)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    .font(AppTheme.Typography.caption)
+                    .foregroundColor(AppTheme.Colors.textSecondary)
 
                 Spacer()
 
                 Text("\(conversation.responses.count)")
-                    .font(.caption2)
-                    .fontWeight(.medium)
-                    .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.2))
+                    .font(AppTheme.Typography.caption)
+                    .foregroundColor(AppTheme.Colors.accent)
             }
         }
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .fill(.ultraThinMaterial)
+                .fill(AppTheme.Colors.surfaceElevated)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(Color.white.opacity(0.3), lineWidth: 0.5)
+                .strokeBorder(AppTheme.Colors.outline.opacity(0.4), lineWidth: 0.5)
         )
     }
 }

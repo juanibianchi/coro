@@ -36,7 +36,8 @@ class MLXService {
             response: "",
             tokens: nil,
             latencyMs: latencyMs,
-            error: "⚠️ On-device inference is not available on iOS Simulator. Please test on a real device (iPhone 13 or later) to use the local Llama 3.2 1B model."
+            error: "⚠️ On-device inference is not available on iOS Simulator. Please test on a real device (iPhone 13 or later) to use the local Llama 3.2 1B model.",
+            errorCode: "model_unavailable"
         )
         #else
         do {
@@ -96,7 +97,8 @@ class MLXService {
                 response: response,
                 tokens: tokens,
                 latencyMs: latencyMs,
-                error: nil
+                error: nil,
+                errorCode: nil
             )
 
         } catch {
@@ -106,7 +108,8 @@ class MLXService {
                 response: "",
                 tokens: nil,
                 latencyMs: latencyMs,
-                error: "On-device inference error: \(error.localizedDescription)"
+                error: "On-device inference error: \(error.localizedDescription)",
+                errorCode: "internal_error"
             )
         }
         #endif

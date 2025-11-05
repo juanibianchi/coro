@@ -6,8 +6,9 @@ FastAPI application for comparing responses from multiple AI models.
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.routers import chat
+from backend.routers import chat, auth
 from backend.config import config
+from backend.services.rate_limiter import init_rate_limiter, shutdown_rate_limiter
 
 # Configure logging
 logging.basicConfig(
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 # Create FastAPI app
 app = FastAPI(
     title="CORO API",
-    description="Multi-LLM chat application for comparing AI model responses",
+    description="Multi-LLM consultation service for gathering diverse AI perspectives",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
@@ -39,6 +40,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(chat.router, tags=["chat"])
+app.include_router(auth.router, tags=["auth"])
 
 
 @app.on_event("startup")
@@ -66,6 +68,9 @@ async def startup_event():
         logger.warning(f"⚠ Missing API keys: {', '.join(missing_keys)}")
         logger.warning("Some models may not work without proper API keys configured.")
 
+    await init_rate_limiter(config)
+    logger.info("Rate limiter initialized")
+
     logger.info("CORO API server started successfully")
 
 
@@ -78,6 +83,9 @@ async def shutdown_event():
     from backend.utils.performance import close_http_client
     await close_http_client()
 
+    await shutdown_rate_limiter()
+    logger.info("Rate limiter shut down")
+
     logger.info("CORO API server shut down successfully")
 
 
@@ -87,7 +95,7 @@ async def root():
     return {
         "name": "CORO API",
         "version": "1.0.0",
-        "description": "Multi-LLM chat comparison service",
+        "description": "Multi-LLM perspective service",
         "docs": "/docs",
         "health": "/health",
         "models": "/models"

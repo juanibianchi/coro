@@ -100,7 +100,8 @@ final class ModelConversionTests: XCTestCase {
         let savedMessage = SavedConversationMessage(
             modelId: "gemini",
             role: "user",
-            content: "Test question"
+            content: "Test question",
+            orderIndex: 0
         )
 
         let message = savedMessage.toMessage()
@@ -112,7 +113,7 @@ final class ModelConversionTests: XCTestCase {
     func testMessageToSavedConversationMessage() {
         let message = Message(role: "assistant", content: "Test answer")
 
-        let savedMessage = SavedConversationMessage.from(message, modelId: "gemini")
+        let savedMessage = SavedConversationMessage.from(message, modelId: "gemini", order: 0)
 
         XCTAssertEqual(savedMessage.modelId, "gemini")
         XCTAssertEqual(savedMessage.role, "assistant")
@@ -122,7 +123,7 @@ final class ModelConversionTests: XCTestCase {
     func testRoundTripConversion() {
         let originalMessage = Message(role: "user", content: "Original content")
 
-        let saved = SavedConversationMessage.from(originalMessage, modelId: "test-model")
+        let saved = SavedConversationMessage.from(originalMessage, modelId: "test-model", order: 2)
         let converted = saved.toMessage()
 
         XCTAssertEqual(converted.role, originalMessage.role)
@@ -136,7 +137,7 @@ final class ModelConversionTests: XCTestCase {
             SavedModelResponse(model: "gemini", response: "Test", tokens: 10, latencyMs: 100, error: nil)
         ]
         let messages = [
-            SavedConversationMessage(modelId: "gemini", role: "user", content: "Question")
+            SavedConversationMessage(modelId: "gemini", role: "user", content: "Question", orderIndex: 0)
         ]
 
         let conversation = Conversation(

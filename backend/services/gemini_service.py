@@ -5,6 +5,7 @@ from typing import Optional, Tuple
 import google.generativeai as genai
 from backend.config import config
 from backend.models.schemas import ModelResponse
+from backend.models.error_codes import ErrorCode, categorize_error
 
 
 class GeminiService:
@@ -12,8 +13,9 @@ class GeminiService:
 
     def __init__(self):
         """Initialize Gemini service with API key."""
-        if config.GEMINI_API_KEY:
-            genai.configure(api_key=config.GEMINI_API_KEY)
+        self.default_api_key = config.GEMINI_API_KEY
+        if self.default_api_key:
+            genai.configure(api_key=self.default_api_key)
         self.model_name = config.MODELS["gemini"]["model_name"]
 
     async def generate(
@@ -21,21 +23,31 @@ class GeminiService:
         prompt: str,
         temperature: float = 0.7,
         max_tokens: int = 512,
-        conversation_history: list = None
+        top_p: Optional[float] = None,
+        conversation_history: list = None,
+        api_key_override: Optional[str] = None
     ) -> ModelResponse:
         """
         Generate a response using Gemini.
 
         Args:
             prompt: The input prompt
-            temperature: Temperature for generation (0.0-1.0)
-            max_tokens: Maximum tokens to generate
+            temperature: Temperature for generation (0.0-2.0)
+            max_tokens: Maximum tokens to generate (1-32000)
+            top_p: Nucleus sampling parameter (0.0-1.0, optional)
             conversation_history: Optional list of previous messages
 
         Returns:
             ModelResponse with the generated text or error
         """
         start_time = time.time()
+
+        api_key = api_key_override or self.default_api_key
+        if not api_key:
+            raise ValueError("Gemini API key not configured")
+
+        # Configure Google client on each call to respect overrides
+        genai.configure(api_key=api_key)
 
         try:
             # Build full prompt from conversation history
@@ -49,10 +61,16 @@ class GeminiService:
             full_prompt += f"User: {prompt}\n\nAssistant:"
 
             # Configure generation parameters
-            generation_config = genai.GenerationConfig(
-                temperature=temperature,
-                max_output_tokens=max_tokens,
-            )
+            config_params = {
+                "temperature": temperature,
+                "max_output_tokens": max_tokens,
+            }
+
+            # Add top_p if provided
+            if top_p is not None:
+                config_params["top_p"] = top_p
+
+            generation_config = genai.GenerationConfig(**config_params)
 
             # Configure safety settings to be more permissive
             safety_settings = [
@@ -130,19 +148,28 @@ class GeminiService:
                 response=text,
                 tokens=tokens,
                 latency_ms=latency_ms,
-                error=None
+                error=None,
+                error_code=None
             )
 
         except Exception as e:
             latency_ms = int((time.time() - start_time) * 1000)
             error_msg = str(e)
+            error_code = categorize_error(e)
+
+            # Override error code for specific Gemini issues
+            if "safety" in error_msg.lower() or "blocked" in error_msg.lower():
+                error_code = ErrorCode.CONTENT_FILTERED
+            elif "api key" in error_msg.lower():
+                error_code = ErrorCode.AUTHENTICATION_FAILED
 
             return ModelResponse(
                 model="gemini",
                 response="",
                 tokens=None,
                 latency_ms=latency_ms,
-                error=error_msg
+                error=error_msg,
+                error_code=error_code.value
             )
 
     @staticmethod

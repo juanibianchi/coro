@@ -24,11 +24,11 @@ struct LoadingSkeletonView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
                     RoundedRectangle(cornerRadius: 14)
-                        .fill(.ultraThinMaterial)
+                        .fill(AppTheme.Colors.surfaceElevated)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 14)
-                        .strokeBorder(Color.white.opacity(0.3), lineWidth: 1)
+                        .strokeBorder(AppTheme.Colors.outline.opacity(0.4), lineWidth: 1)
                 )
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
@@ -43,7 +43,7 @@ struct LoadingSkeletonView: View {
                 }
                 .padding(.bottom, 12)
             }
-            .background(.regularMaterial)
+            .background(AppTheme.Colors.surface.opacity(0.95))
 
             // Tab bar placeholder
             ScrollView(.horizontal, showsIndicators: false) {
@@ -56,7 +56,7 @@ struct LoadingSkeletonView: View {
                 .padding(.horizontal, 20)
             }
             .padding(.vertical, 20)
-            .background(.regularMaterial)
+            .background(AppTheme.Colors.surface.opacity(0.95))
 
             // Content area
             VStack(spacing: 20) {
@@ -73,7 +73,7 @@ struct LoadingSkeletonView: View {
             }
             .padding(24)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .background(.thinMaterial)
+            .background(AppTheme.Colors.surface.opacity(0.9))
         }
     }
 }
