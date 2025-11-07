@@ -1,7 +1,7 @@
 """Google Gemini API service client."""
 
 import time
-from typing import Optional, Tuple
+from typing import Optional
 import google.generativeai as genai
 from backend.config import config
 from backend.models.schemas import ModelResponse
@@ -25,7 +25,8 @@ class GeminiService:
         max_tokens: int = 512,
         top_p: Optional[float] = None,
         conversation_history: list = None,
-        api_key_override: Optional[str] = None
+        api_key_override: Optional[str] = None,
+        system_prompt: Optional[str] = None
     ) -> ModelResponse:
         """
         Generate a response using Gemini.
@@ -36,6 +37,7 @@ class GeminiService:
             max_tokens: Maximum tokens to generate (1-32000)
             top_p: Nucleus sampling parameter (0.0-1.0, optional)
             conversation_history: Optional list of previous messages
+            system_prompt: Optional system-level instructions/context to prepend
 
         Returns:
             ModelResponse with the generated text or error
@@ -50,15 +52,24 @@ class GeminiService:
         genai.configure(api_key=api_key)
 
         try:
-            # Build full prompt from conversation history
+            # Build full prompt with optional system guidance and conversation history
+            sections = []
+
+            if system_prompt:
+                sections.append(system_prompt.strip())
+
             full_prompt = ""
             if conversation_history:
                 for msg in conversation_history:
                     role_label = "User" if msg.role == "user" else "Assistant"
                     full_prompt += f"{role_label}: {msg.content}\n\n"
+                if full_prompt:
+                    sections.append(full_prompt.strip())
 
-            # Add current prompt
-            full_prompt += f"User: {prompt}\n\nAssistant:"
+            prompt_section = f"User: {prompt}\n\nAssistant:"
+            sections.append(prompt_section)
+
+            combined_prompt = "\n\n".join(section for section in sections if section)
 
             # Configure generation parameters
             config_params = {
@@ -100,7 +111,7 @@ class GeminiService:
             )
 
             # Generate response
-            response = model.generate_content(full_prompt if conversation_history else prompt)
+            response = model.generate_content(combined_prompt)
 
             # Calculate latency
             latency_ms = int((time.time() - start_time) * 1000)

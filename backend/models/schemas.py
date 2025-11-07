@@ -11,6 +11,28 @@ class Message(BaseModel):
     content: str = Field(..., min_length=1, description="Message content")
 
 
+class SearchResult(BaseModel):
+    """Single search result item."""
+
+    title: str
+    snippet: str
+    url: str
+
+
+class SearchContext(BaseModel):
+    """Contextual web search data supplied when invoking models."""
+
+    query: str
+    results: List[SearchResult]
+
+
+class SearchResponse(BaseModel):
+    """Response schema for web search."""
+
+    query: str
+    results: List[SearchResult]
+
+
 class ChatRequest(BaseModel):
     """Request schema for chat endpoints."""
 
@@ -26,6 +48,14 @@ class ChatRequest(BaseModel):
     api_overrides: Optional[dict[str, str]] = Field(
         default=None,
         description="Optional per-model API key overrides supplied by the client"
+    )
+    conversation_guide: Optional[str] = Field(
+        default=None,
+        description="Optional conversation-wide guidance/instructions to prepend to the model"
+    )
+    search_context: Optional["SearchContext"] = Field(
+        default=None,
+        description="Optional web search context to share with models"
     )
 
     @field_validator("models")

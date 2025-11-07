@@ -54,7 +54,8 @@ class DeepSeekService:
         max_tokens: int = 512,
         top_p: Optional[float] = None,
         conversation_history: list = None,
-        api_key_override: Optional[str] = None
+        api_key_override: Optional[str] = None,
+        system_prompt: Optional[str] = None
     ) -> ModelResponse:
         """
         Generate a response using DeepSeek API with connection pooling and retry logic.
@@ -78,6 +79,11 @@ class DeepSeekService:
 
             # Build messages array from conversation history
             messages = []
+            if system_prompt:
+                messages.append({
+                    "role": "system",
+                    "content": system_prompt
+                })
             if conversation_history:
                 for msg in conversation_history:
                     messages.append({

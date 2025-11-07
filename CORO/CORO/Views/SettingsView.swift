@@ -62,6 +62,8 @@ struct SettingsView: View {
 
     @State private var editedURL: String = ""
     @State private var editedToken: String = ""
+    @State private var editedConversationGuide: String = ""
+    @State private var editedSearchDefault: Bool = false
     @State private var showingHealthStatus = false
     @State private var isHealthy = false
     @State private var isCheckingHealth = false
@@ -74,6 +76,7 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 accountSection
+                conversationDefaultsSection
                 endpointSection
                 byokSection
                 aboutSection
@@ -91,6 +94,8 @@ struct SettingsView: View {
             .onAppear {
                 editedURL = apiService.baseURL
                 editedToken = apiService.apiToken
+                editedConversationGuide = apiService.conversationGuide
+                editedSearchDefault = apiService.searchEnabledByDefault
             }
             .alert("Sign in with Apple", isPresented: Binding(
                 get: { appleErrorMessage != nil },
@@ -206,6 +211,66 @@ struct SettingsView: View {
         }
     }
 
+    private var conversationDefaultsSection: some View {
+        Section("Conversation Defaults") {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Custom Instructions")
+                    .font(.subheadline)
+                    .foregroundColor(AppTheme.Colors.textPrimary)
+
+                ZStack(alignment: .topLeading) {
+                    if editedConversationGuide.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text("e.g., \"Always respond in a concise, professional tone\" or \"Provide code examples in Swift when discussing iOS development\"")
+                            .font(.body)
+                            .foregroundColor(AppTheme.Colors.textSecondary.opacity(0.5))
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 20)
+                    }
+
+                    TextEditor(text: $editedConversationGuide)
+                        .frame(minHeight: 140)
+                        .padding(12)
+                        .scrollContentBackground(.hidden)
+                        .background(Color.clear)
+                }
+                .background(AppTheme.Colors.surface.opacity(0.95))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(AppTheme.Colors.outline.opacity(0.3), lineWidth: 0.8)
+                )
+
+                Text("Add global instructions that all AI models will follow. This helps personalize responses to your preferences.")
+                    .font(.caption)
+                    .foregroundColor(AppTheme.Colors.textSecondary)
+            }
+
+            Toggle(isOn: $editedSearchDefault) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Auto-run web search")
+                        .font(.subheadline)
+                        .foregroundColor(AppTheme.Colors.textPrimary)
+                    Text("When enabled, CORO fetches web context for each new prompt before asking the models.")
+                        .font(.caption)
+                        .foregroundColor(AppTheme.Colors.textSecondary)
+                }
+            }
+            .tint(AppTheme.Colors.accent)
+
+            Button(role: .none) {
+                withAnimation {
+                    editedConversationGuide = ""
+                }
+            } label: {
+                Label("Clear Instructions", systemImage: "xmark.circle")
+                    .font(.caption)
+            }
+            .foregroundColor(AppTheme.Colors.textSecondary)
+            .padding(.top, 4)
+            .disabled(editedConversationGuide.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+    }
+
     private var byokSection: some View {
         Section("Bring Your Own Keys") {
             NavigationLink {
@@ -285,6 +350,8 @@ struct SettingsView: View {
     private func saveSettings() {
         apiService.baseURL = editedURL
         apiService.apiToken = editedToken
+        apiService.updateConversationGuide(editedConversationGuide)
+        apiService.updateSearchDefault(editedSearchDefault)
     }
 
     private func testConnection() async {

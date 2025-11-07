@@ -27,6 +27,7 @@
 ❌ Redis-backed rate limiting optional: without Redis we fall back to in-memory limits (not suitable for multi-instance deploys)
 ❌ Apple Sign-In verification currently skips signature checks unless `APPLE_CLIENT_ID` is provided
 ❌ No web interface - iOS only
+❌ Web search requires `TAVILY_API_KEY`; lacks caching, per-prompt toggles, and intent gating (global enable only) — this is now the highest-priority follow-up
 
 ---
 
@@ -35,6 +36,7 @@
 ### Phase 1: Core Functionality Improvements
 
 #### 1. Conversation History 📝
+*Branching:* Implement this feature on its own branch and merge only after we confirm it works and we like it.
 **Status:** Not Started
 **Priority:** High
 **Estimated Effort:** Medium
@@ -83,6 +85,7 @@ messages:
 ---
 
 #### 2. Streaming Responses ⚡
+*Branching:* Implement this feature on its own branch and merge only after we confirm it works and we like it.
 **Status:** Not Started
 **Priority:** High
 **Estimated Effort:** Medium-High
@@ -116,6 +119,7 @@ messages:
 ---
 
 #### 3. Model Parameters 🎛️
+*Branching:* Implement this feature on its own branch and merge only after we confirm it works and we like it.
 **Status:** ✅ COMPLETED
 **Priority:** Medium
 **Estimated Effort:** Low-Medium
@@ -151,6 +155,7 @@ messages:
 ---
 
 #### 4. Better Error UX 🚨
+*Branching:* Implement this feature on its own branch and merge only after we confirm it works and we like it.
 **Status:** Not Started
 **Priority:** Medium
 **Estimated Effort:** Low
@@ -198,9 +203,123 @@ messages:
 
 ---
 
+### Phase 1B: Guidance & Context Enhancements
+
+#### Conversation Guidance & Web Context 🤝
+*Branching:* Implement this feature on its own branch and merge only after we confirm it works and we like it.
+**Status:** In Progress
+**Priority:** High
+**Estimated Effort:** Medium
+
+**Requirements:**
+- [x] Backend: Extend `/chat` schema with `conversation_guide` + `search_context` and merge into model-specific system prompts.
+- [x] Backend: Provide `/search` proxy (Tavily) with graceful fallback when credentials missing.
+- [x] iOS: Persist conversation guide + default search toggle, injecting context for new runs and follow-ups (cloud + on-device).
+- [x] iOS: Surface guidance/search context in UI (home chips, results view) and expose settings controls.
+- [ ] Backend: Unit tests for `_compose_system_prompt` and search provider errors.
+- [ ] iOS: Add automated coverage for prompt builder + context presentation.
+- [ ] UX: Consider per-prompt search toggle and “view all sources” affordance in results.
+
+**Notes:**
+- Requires `TAVILY_API_KEY` (and optional `TAVILY_ENDPOINT`) to enable web search.
+- Default search toggle currently global; evaluate light caching to avoid duplicate queries.
+- Intent-driven search (see Phase 1C) will eventually replace the always-on toggle.
+
+---
+
+### Phase 1C: November Spec Alignment
+
+#### 1. Code Execution ⚙️
+*Branching:* Implement this feature on its own branch and merge only after we confirm it works and we like it.
+**Status:** Not Started  
+**Goal:** Run Python snippets safely inside Docker and stream stdout/stderr/exit status back to the app.
+
+**Tasks:**
+- [ ] Backend: Scaffold a `/execute` API that spins up a short-lived Docker container with resource/time limits.
+- [ ] Backend: Capture stdout, stderr, and exit code; enforce cancellation for long-running jobs.
+- [ ] Backend: Sanitize inputs and guard against filesystem/network access beyond the container sandbox.
+- [ ] iOS: Add UI affordance (Workspace view) to submit code, display logs, and surface errors clearly.
+- [ ] Monitoring: Emit audit logs + metrics for execution timeouts/failures.
+
+#### 2. Intent-Driven Web Search 🔍
+*Branching:* Implement this feature on its own branch and merge only after we confirm it works and we like it.
+**Status:** Not Started  
+**Priority:** Highest (user-blocking)  
+**Goal:** Only hit external search when the user prompt explicitly requires it via a lightweight classifier.
+
+**Tasks:**
+- [ ] Backend: Add `/search/intent` classifier or inline model that returns `should_search` + normalized query.
+- [ ] Backend: Trigger Tavily search only when classifier returns `true`, attach snippets to model prompts.
+- [ ] iOS: Remove always-on search toggle; expose optional UI switch but keep intent as gatekeeper.
+- [ ] iOS: Communicate when external data was fetched (e.g., inline badge/timestamp).
+- [ ] Testing: Add unit/integration tests covering intent true/false, fallback when classifier or search fails.
+
+#### 3. Model Description Tags 🏷️
+*Branching:* Implement this feature on its own branch and merge only after we confirm it works and we like it.
+**Status:** Not Started  
+**Goal:** Surface one-liner guidance per model to help users choose the right set.
+
+**Tasks:**
+- [ ] Backend/config: Extend model metadata with `tagline` + `recommended_use`.
+- [ ] iOS: Show the taglines inside `ModelSelectorView` without cluttering layout.
+
+#### 4. Additional Models 🧠
+*Branching:* Implement this feature on its own branch and merge only after we confirm it works and we like it.
+**Status:** Not Started  
+**Goal:** Integrate extra free/local models to increase coverage.
+
+**Tasks:**
+- [ ] Evaluate candidate open models (e.g., Mistral-small, Phi-3-mini) for latency/cost.
+- [ ] Backend: Wire provider clients and expose via `/models`.
+- [ ] iOS: Ensure selection grid + response handling supports the larger set (ordering, colors, copy).
+
+#### 5. Quick Diff ✂️
+*Branching:* Implement this feature on its own branch and merge only after we confirm it works and we like it.
+**Status:** Not Started  
+**Goal:** Highlight deltas between model responses to spotlight unique insights.
+
+**Tasks:**
+- [ ] Backend or client diffing strategy (token diff, sentence-level).
+- [ ] iOS: Visual treatment (chips/highlights) that remains readable.
+- [ ] Accessibility: Ensure VoiceOver describes differences meaningfully.
+
+#### 6. Workspace View 💻
+*Branching:* Implement this feature on its own branch and merge only after we confirm it works and we like it.
+**Status:** Not Started  
+**Goal:** Provide a coding-focused layout that ties prompts, code, execution, and output together.
+
+**Tasks:**
+- [ ] iOS: New Workspace screen with prompt editor, code editor, run button, console output.
+- [ ] State management: Sync Workspace with conversation + code execution API.
+- [ ] UX: Support iterative refine/run loop with history of executions.
+
+#### 7. Speech-to-Text 🎙️
+*Branching:* Implement this feature on its own branch and merge only after we confirm it works and we like it.
+**Status:** Not Started  
+**Goal:** Let users dictate prompts (especially for coding use cases).
+
+**Tasks:**
+- [ ] Investigate Apple Speech / Whisper / on-device APIs for acceptable accuracy + privacy.
+- [ ] iOS: Add microphone control, permission flow, and transcription preview.
+- [ ] Error handling + fallback to keyboard input.
+
+#### 8. Fusion Model (Meta-Response) 🧬
+*Branching:* Implement this feature on its own branch and merge only after we confirm it works and we like it.
+**Status:** Not Started  
+**Goal:** Produce a synthesized “best of” answer after individual models respond.
+
+**Tasks:**
+- [ ] Backend: Add fusion pipeline that ingests original prompt + per-model answers and returns a merged response.
+- [ ] Model choice: Evaluate using best available cloud model or fine-tuned local option.
+- [ ] iOS: UI to display the fused answer alongside individual perspectives; allow opt-in/out.
+- [ ] Testing: Validate that fusion respects citations and handles conflicting info gracefully.
+
+---
+
 ### Phase 2: New Platforms
 
 #### 5. Web Interface 🌐
+*Branching:* Implement this feature on its own branch and merge only after we confirm it works and we like it.
 **Status:** Not Started
 **Priority:** High
 **Estimated Effort:** High
@@ -240,6 +359,7 @@ messages:
 ### Phase 3: Quality of Life
 
 #### 6. Markdown Rendering 📄
+*Branching:* Implement this feature on its own branch and merge only after we confirm it works and we like it.
 **Status:** ✅ COMPLETED
 **Priority:** Medium
 **Estimated Effort:** Low
@@ -262,6 +382,25 @@ messages:
 ---
 
 ## 🔄 Active Development Log
+
+### Session: 2025-11-05 (Web Context & Guide)
+**Working on:** Conversation guide + web search integration
+
+**Completed:**
+- ✅ Extended backend chat schema to accept `conversation_guide` and `search_context`, composing unified system prompts for Gemini, Groq, DeepSeek, and the in-app MLX model.
+- ✅ Wired the new `/search` proxy through iOS so initial runs and follow-ups fetch Tavily results (when enabled) and inject them for every model, including local inference.
+- ✅ Surfaced guidance/search context in the app (home chips, results context card) and added Settings controls to edit the guide and toggle default web search.
+- ✅ Synced search defaults between Settings and ChatViewModel to prevent drift and ensured conversation guide persists via UserDefaults/Keychain.
+
+**Notes:**
+- Document Tavily setup (`TAVILY_API_KEY` + optional endpoint) alongside other env vars.
+- Results screen currently shows top three sources; consider expanding or adding a “view all sources” affordance later.
+
+**TODO:**
+- [ ] Add backend unit tests for `_compose_system_prompt` and the search proxy fallback behaviour.
+- [ ] Gracefully surface provider errors in-app when search credentials are missing or calls fail (banner/alert).
+- [ ] Evaluate lightweight caching/deduping for repeated search queries.
+- [ ] Outline deferred code execution feature plan (separate branch).
 
 ### Session: 2025-11-05
 **Working on:** Chat UX responsiveness & history cleanup
@@ -380,6 +519,7 @@ messages:
 **Notes:**
 - Redis remains optional for local dev; production deploys should supply `REDIS_URL` for consistent limits.
 - Sign in verification skips signature checks unless `APPLE_CLIENT_ID` is configured.
+- Cerebras integration landed: backend now calls their Chat Completions API (requires `CEREBRAS_API_KEY` + `CEREBRAS_API_URL`), we surface Llama 3.1 8B / 3.3 70B / GPT‑OSS 120B / Qwen 3 32B in `/models`, and rate-limit headers are logged for observability.
 
 **Next Focus:** Continue Phase 1 roadmap (Better error UX, streaming) once foundation tasks are validated.
 
@@ -427,6 +567,7 @@ When pausing work or handing off to another agent:
 - Backend config: `backend/config.py`
 - API routes: `backend/routers/chat.py`
 - LLM services: `backend/services/*.py`
+- Web search proxy: `backend/services/search_service.py`, `backend/routers/search.py`
 - iOS app: `CORO/CORO/` (note: separate from `ios/CORO/`)
 - iOS API client: `CORO/CORO/Services/APIService.swift`
 
@@ -447,6 +588,8 @@ DEEPSEEK_API_KEY=<optional>
 CORS_ALLOWED_ORIGINS=*
 CORS_ALLOW_CREDENTIALS=true
 CORO_API_TOKEN=<secret>
+TAVILY_API_KEY=<optional>
+TAVILY_ENDPOINT=https://api.tavily.com/search (default)
 ```
 
 ### Future Considerations:

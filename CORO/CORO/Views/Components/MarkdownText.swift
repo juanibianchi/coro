@@ -5,7 +5,7 @@ struct MarkdownText: View {
     let fontSize: CGFloat
     let lineSpacing: CGFloat
 
-    init(_ content: String, fontSize: CGFloat = 16, lineSpacing: CGFloat = 7) {
+    init(_ content: String, fontSize: CGFloat = 16, lineSpacing: CGFloat = 10) {
         self.content = content
         self.fontSize = fontSize
         self.lineSpacing = lineSpacing
@@ -14,16 +14,25 @@ struct MarkdownText: View {
     var body: some View {
         let processedContent = preprocessLaTeX(content)
 
-        if let attributedString = try? AttributedString(markdown: processedContent, options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)) {
+        if let attributedString = try? AttributedString(
+            markdown: processedContent,
+            options: AttributedString.MarkdownParsingOptions(
+                allowsExtendedAttributes: true,
+                interpretedSyntax: .full,
+                failurePolicy: .returnPartiallyParsedIfPossible
+            )
+        ) {
             Text(attributedString)
                 .font(.system(size: fontSize))
                 .lineSpacing(lineSpacing)
+                .multilineTextAlignment(.leading)
                 .textSelection(.enabled)
         } else {
             // Fallback if markdown parsing fails
             Text(processedContent)
                 .font(.system(size: fontSize))
                 .lineSpacing(lineSpacing)
+                .multilineTextAlignment(.leading)
                 .textSelection(.enabled)
         }
     }
@@ -55,7 +64,6 @@ struct MarkdownText: View {
 
         // Convert common LaTeX commands to Unicode
         let latexReplacements: [String: String] = [
-            #"\\times"#: "×",
             #"\\div"#: "÷",
             #"\\pm"#: "±",
             #"\\leq"#: "≤",
@@ -74,7 +82,6 @@ struct MarkdownText: View {
             #"\\sigma"#: "σ",
             #"\\sum"#: "Σ",
             #"\\sqrt"#: "√",
-            #"\\frac"#: "/",
             #"\\\\"#: "\n"
         ]
 
@@ -86,6 +93,14 @@ struct MarkdownText: View {
         processed = processed.replacingOccurrences(
             of: #"\\frac\{([^}]+)\}\{([^}]+)\}"#,
             with: "($1/$2)",
+            options: .regularExpression
+        )
+
+        // Ensure proper paragraph spacing
+        // Convert sequences of 3+ newlines to exactly 2 newlines (paragraph break)
+        processed = processed.replacingOccurrences(
+            of: #"\n{3,}"#,
+            with: "\n\n",
             options: .regularExpression
         )
 
@@ -114,6 +129,24 @@ struct MarkdownText: View {
                 let digit = String(match.dropFirst(2).dropLast())
                 return subscriptMap[digit] ?? "_\(digit)"
             },
+            options: .regularExpression
+        )
+
+        processed = processed.replacingOccurrences(
+            of: #"\\text\{([^}]+)\}"#,
+            with: "$1",
+            options: .regularExpression
+        )
+
+        processed = processed.replacingOccurrences(
+            of: #"\\times"#,
+            with: "×",
+            options: .regularExpression
+        )
+
+        processed = processed.replacingOccurrences(
+            of: #"\\frac\{([^}]+)\}\{([^}]+)\}"#,
+            with: "($1/$2)",
             options: .regularExpression
         )
 

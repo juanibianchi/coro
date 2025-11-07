@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import SwiftData
+import Combine
 
 enum ViewState: Equatable {
     case idle
@@ -28,6 +29,21 @@ class ChatViewModel: ObservableObject {
     @Published var selectedTab: Int = 0
     @Published var conversationHistory: [String: [Message]] = [:]  // Per-model conversation history
     @Published var globalError: GlobalError?
+    @Published var pendingCompletionBadges: Set<String> = []
+    @Published var searchResults: [APIService.SearchResult] = []
+    @Published var isSearchEnabled: Bool {
+        didSet {
+            if apiService.searchEnabledByDefault != isSearchEnabled {
+                apiService.updateSearchDefault(isSearchEnabled)
+            }
+            if !isSearchEnabled {
+                searchResults = []
+                lastSearchContext = nil
+                lastSearchQuery = nil
+            }
+        }
+    }
+    @Published var isSearching: Bool = false
 
     // Model parameters
     @Published var temperature: Double = 0.7
@@ -43,18 +59,52 @@ class ChatViewModel: ObservableObject {
     private var lastSelectedModels: Set<String> = []
     private var isRestoringConversation = false
     private var hasAutoSelectedFirstReadyResponse = false
+    private var userManuallySelectedTab = false
     private var activeConversation: Conversation?
+    private var badgeRemovalWorkItems: [String: DispatchWorkItem] = [:]
+    private var lastSearchContext: String?
+    private var lastSearchQuery: String?
+    private var cancellables: Set<AnyCancellable> = []
+
+    struct RequestContext: Sendable {
+        let conversationGuide: String?
+        let searchPayload: SearchContextPayload?
+        let systemPrompt: String?
+        let searchSection: String?
+    }
 
     // On-device model IDs
     private let onDeviceModelIds = ["llama-3.2-1b-local"]
     private let placeholderText = "Awaiting response..."
-    private let modelDisplayOrder = ["gemini", "llama-70b", "llama-8b", "mixtral", "deepseek", "llama-3.2-1b-local"]
+    private let modelDisplayOrder = [
+        "gemini",
+        "cerebras-llama-3.1-8b",
+        "cerebras-llama-3.3-70b",
+        "cerebras-gpt-oss-120b",
+        "cerebras-qwen-3-32b",
+        "llama-70b",
+        "llama-8b",
+        "mixtral",
+        "deepseek",
+        "llama-3.2-1b-local"
+    ]
     private let pendingAssistantPlaceholder = Message.pendingAssistantPlaceholder
 
     init(apiService: APIService? = nil, mlxService: MLXService? = nil) {
         self.apiService = apiService ?? APIService()
         self.mlxService = mlxService ?? MLXService()
+        isSearchEnabled = self.apiService.searchEnabledByDefault
         loadDefaultModels()
+
+        self.apiService.$searchEnabledByDefault
+            .receive(on: RunLoop.main)
+            .sink { [weak self] newValue in
+                guard let self else { return }
+                if self.isSearchEnabled != newValue {
+                    self.isSearchEnabled = newValue
+                }
+            }
+            .store(in: &cancellables)
     }
 
     // MARK: - Load Available Models
@@ -97,6 +147,10 @@ class ChatViewModel: ObservableObject {
         // Fallback models if API fails
         availableModels = [
             ModelInfo(id: "gemini", name: "Gemini 2.5 Flash", provider: "Google", cost: "free"),
+            ModelInfo(id: "cerebras-llama-3.1-8b", name: "Cerebras Llama 3.1 8B", provider: "Cerebras", cost: "fast"),
+            ModelInfo(id: "cerebras-llama-3.3-70b", name: "Cerebras Llama 3.3 70B", provider: "Cerebras", cost: "fast"),
+            ModelInfo(id: "cerebras-gpt-oss-120b", name: "Cerebras GPT-OSS 120B", provider: "Cerebras", cost: "fast"),
+            ModelInfo(id: "cerebras-qwen-3-32b", name: "Cerebras Qwen 3 32B", provider: "Cerebras", cost: "fast"),
             ModelInfo(id: "llama-70b", name: "Llama 3.3 70B", provider: "Groq", cost: "free"),
             ModelInfo(id: "llama-8b", name: "Llama 3.1 8B", provider: "Groq", cost: "free"),
             ModelInfo(id: "mixtral", name: "Llama 4 Maverick", provider: "Groq", cost: "free"),
@@ -129,6 +183,11 @@ class ChatViewModel: ObservableObject {
         }
 
         globalError = nil
+        pendingCompletionBadges.removeAll()
+        userManuallySelectedTab = false
+        clearScheduledBadgeRemovals()
+
+        let context = await prepareContext(for: trimmedPrompt)
 
         viewState = .loading
         responses = []
@@ -155,6 +214,7 @@ class ChatViewModel: ObservableObject {
                 errorCode: nil
             )
         }
+        selectedTab = 0
         totalLatency = 0
 
         // Append user prompt to conversation history snapshot
@@ -187,7 +247,8 @@ class ChatViewModel: ObservableObject {
                                 prompt: trimmedPrompt,
                                 temperature: Float(temperatureValue),
                                 maxTokens: maxTokensValue,
-                                conversationHistory: history
+                                conversationHistory: history,
+                                systemPrompt: context.systemPrompt
                             )
                             return (modelId, .success(response))
                         } catch {
@@ -206,7 +267,9 @@ class ChatViewModel: ObservableObject {
                                 maxTokens: maxTokensValue,
                                 topP: topPValue,
                                 conversationHistory: conversationPayload,
-                                apiOverrides: overridesDictionary.isEmpty ? nil : overridesDictionary
+                                apiOverrides: overridesDictionary.isEmpty ? nil : overridesDictionary,
+                                conversationGuide: context.conversationGuide,
+                                searchContext: context.searchPayload
                             )
 
                             let result = try await self.apiService.sendChatRequest(request)
@@ -224,6 +287,8 @@ class ChatViewModel: ObservableObject {
             for await (modelId, result) in group {
                 switch result {
                 case .success(let response):
+                    let currentSelectedModelId = responses.indices.contains(selectedTab) ? responses[selectedTab].model : nil
+
                     if let index = responses.firstIndex(where: { $0.model == modelId }) {
                         responses[index] = response
                     } else {
@@ -237,9 +302,24 @@ class ChatViewModel: ObservableObject {
                         replacePendingAssistantMessage(for: modelId, with: response.userFriendlyError)
                     }
 
+                    cancelBadgeRemoval(for: modelId)
+                    if let selectedModel = currentSelectedModelId,
+                       selectedModel != modelId,
+                       userManuallySelectedTab {
+                        pendingCompletionBadges.insert(modelId)
+                        scheduleBadgeRemoval(for: modelId)
+                    } else {
+                        pendingCompletionBadges.remove(modelId)
+                    }
+
                     totalLatency = max(totalLatency, response.latencyMs)
 
+                    if !responses.contains(where: { $0.hasError }) {
+                        globalError = nil
+                    }
+
                 case .failure(let error):
+                    let currentSelectedModelId = responses.indices.contains(selectedTab) ? responses[selectedTab].model : nil
                     let failureLatency = Int(Date().timeIntervalSince(overallStart) * 1000)
                     let (errorResponse, banner) = makeErrorResponse(for: modelId, error: error, latencyMs: failureLatency)
 
@@ -251,6 +331,12 @@ class ChatViewModel: ObservableObject {
 
                     selectFirstAvailableResponseIfNeeded()
                     replacePendingAssistantMessage(for: modelId, with: errorResponse.userFriendlyError)
+                    if let selectedModel = currentSelectedModelId,
+                       selectedModel != modelId,
+                       userManuallySelectedTab {
+                        pendingCompletionBadges.insert(modelId)
+                        scheduleBadgeRemoval(for: modelId)
+                    }
 
                     if globalError == nil, let banner {
                         globalError = banner
@@ -283,42 +369,78 @@ class ChatViewModel: ObservableObject {
             return
         }
 
+        let retryStart = Date()
+
         do {
             // Get conversation history for this model
             let history = conversationHistory[modelId] ?? []
             let overrides = apiService.modelAPIKeys.overridesDictionary
+            let context = await prepareContext(for: displayedPrompt)
 
-            // Send request to the failed model
-            let request = ChatRequest(
-                prompt: displayedPrompt,
-                models: [modelId],
-                temperature: temperature,
-                maxTokens: maxTokens,
-                topP: topP,
-                conversationHistory: history.isEmpty ? nil : [modelId: history],
-                apiOverrides: overrides.isEmpty ? nil : overrides
-            )
+            let newResponse: ModelResponse
+            if onDeviceModelIds.contains(modelId) {
+                newResponse = try await mlxService.generate(
+                    prompt: displayedPrompt,
+                    temperature: Float(temperature),
+                    maxTokens: maxTokens,
+                    conversationHistory: history,
+                    systemPrompt: context.systemPrompt
+                )
+            } else {
+                let request = ChatRequest(
+                    prompt: displayedPrompt,
+                    models: [modelId],
+                    temperature: temperature,
+                    maxTokens: maxTokens,
+                    topP: topP,
+                    conversationHistory: history.isEmpty ? nil : [modelId: history],
+                    apiOverrides: overrides.isEmpty ? nil : overrides,
+                    conversationGuide: context.conversationGuide,
+                    searchContext: context.searchPayload
+                )
 
-            let result = try await apiService.sendChatRequest(request)
-
-            if let newResponse = result.responses.first {
-                // Replace the failed response with the new one
-                responses[index] = newResponse
-
-                // Update conversation history if successful
-                if !newResponse.hasError {
-                    conversationHistory[modelId]?.append(Message(role: "assistant", content: newResponse.response))
+                let result = try await apiService.sendChatRequest(request)
+                guard let response = result.responses.first else {
+                    throw NSError(domain: "ChatViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "No response received"])
                 }
+                newResponse = response
+            }
 
-                // Haptic feedback
-                let generator = UINotificationFeedbackGenerator()
-                generator.notificationOccurred(newResponse.hasError ? .warning : .success)
+            responses[index] = newResponse
+            replacePendingAssistantMessage(for: modelId, with: newResponse.error == nil ? newResponse.response : newResponse.userFriendlyError)
+
+            cancelBadgeRemoval(for: modelId)
+            if let selectedModel = responses.indices.contains(selectedTab) ? responses[selectedTab].model : nil,
+               selectedModel != modelId,
+               userManuallySelectedTab {
+                pendingCompletionBadges.insert(modelId)
+                scheduleBadgeRemoval(for: modelId)
+            } else {
+                pendingCompletionBadges.remove(modelId)
+            }
+
+            saveConversation()
+
+            let generator = UINotificationFeedbackGenerator()
+            generator.notificationOccurred(newResponse.hasError ? .warning : .success)
+
+            if !responses.contains(where: { $0.hasError }) {
+                globalError = nil
             }
 
         } catch {
-            print("Retry failed: \(error)")
+            let failureLatency = Int(Date().timeIntervalSince(retryStart) * 1000)
+            let (errorResponse, banner) = makeErrorResponse(for: modelId, error: error, latencyMs: failureLatency)
+            responses[index] = errorResponse
+            replacePendingAssistantMessage(for: modelId, with: errorResponse.userFriendlyError)
 
-            // Haptic feedback for error
+            if globalError == nil, let banner {
+                globalError = banner
+            }
+
+            pendingCompletionBadges.insert(modelId)
+            scheduleBadgeRemoval(for: modelId)
+
             let generator = UINotificationFeedbackGenerator()
             generator.notificationOccurred(.error)
         }
@@ -352,6 +474,16 @@ class ChatViewModel: ObservableObject {
         generator.impactOccurred()
     }
 
+    func userSelectedTab(_ index: Int) {
+        userManuallySelectedTab = true
+        if responses.indices.contains(index) {
+            let modelId = responses[index].model
+            pendingCompletionBadges.remove(modelId)
+            cancelBadgeRemoval(for: modelId)
+        }
+        selectedTab = index
+    }
+
     // MARK: - Copy to Clipboard
 
     func copyResponse(_ response: ModelResponse) {
@@ -372,6 +504,113 @@ class ChatViewModel: ObservableObject {
         // Haptic feedback
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
+    }
+
+    // MARK: - Context Preparation
+
+    private func prepareContext(for query: String) async -> RequestContext {
+        await runSearchIfNeeded(for: query)
+        return buildRequestContext()
+    }
+
+    private func runSearchIfNeeded(for query: String) async {
+        guard isSearchEnabled else {
+            searchResults = []
+            lastSearchContext = nil
+            lastSearchQuery = nil
+            isSearching = false
+            return
+        }
+
+        let normalizedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedQuery.isEmpty else {
+            searchResults = []
+            lastSearchContext = nil
+            lastSearchQuery = nil
+            isSearching = false
+            return
+        }
+
+        if normalizedQuery == lastSearchQuery, !searchResults.isEmpty {
+            return
+        }
+
+        isSearching = true
+        defer { isSearching = false }
+
+        do {
+            let results = try await apiService.performSearch(query: normalizedQuery)
+            searchResults = results
+            lastSearchQuery = normalizedQuery
+        } catch {
+            print("Search error: \(error.localizedDescription)")
+            searchResults = []
+            lastSearchQuery = nil
+            lastSearchContext = nil
+        }
+    }
+
+    private func buildRequestContext() -> RequestContext {
+        let trimmedGuide = apiService.conversationGuide.trimmingCharacters(in: .whitespacesAndNewlines)
+        let guide = trimmedGuide.isEmpty ? nil : trimmedGuide
+
+        let payload: SearchContextPayload?
+        if let query = lastSearchQuery, !searchResults.isEmpty {
+            let snippets = searchResults.map {
+                SearchResultSnippet(title: $0.title, snippet: $0.snippet, url: $0.url)
+            }
+            payload = SearchContextPayload(query: query, results: snippets)
+        } else {
+            payload = nil
+        }
+
+        let searchSection = buildSearchSection(from: payload)
+        lastSearchContext = searchSection
+
+        let systemPrompt = composeSystemPrompt(conversationGuide: guide, searchSection: searchSection)
+
+        return RequestContext(
+            conversationGuide: guide,
+            searchPayload: payload,
+            systemPrompt: systemPrompt,
+            searchSection: searchSection
+        )
+    }
+
+    private func buildSearchSection(from payload: SearchContextPayload?) -> String? {
+        guard let payload, !payload.results.isEmpty else { return nil }
+
+        let lines = payload.results.enumerated().map { index, result -> String in
+            let title = result.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            let snippet = result.snippet.trimmingCharacters(in: .whitespacesAndNewlines)
+            let url = result.url.trimmingCharacters(in: .whitespacesAndNewlines)
+            return "[S\(index + 1)] \(title)\n\(snippet)\nSource: \(url)"
+        }.filter { !$0.isEmpty }
+
+        guard !lines.isEmpty else { return nil }
+
+        let query = payload.query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let header = query.isEmpty ? "Web Search Findings:" : "Web Search Findings for \"\(query)\":"
+
+        return header + "\n" + lines.joined(separator: "\n\n") + "\n\nWhen referencing these sources, cite them inline as [S1], [S2], etc."
+    }
+
+    private func composeSystemPrompt(conversationGuide: String?, searchSection: String?) -> String? {
+        var sections: [String] = []
+
+        if let guide = conversationGuide, !guide.isEmpty {
+            sections.append("Conversation Guide:\n\(guide)")
+        }
+
+        if let searchSection, !searchSection.isEmpty {
+            sections.append(searchSection)
+        }
+
+        guard !sections.isEmpty else { return nil }
+
+        let header = "You are contributing one perspective within CORO, an app that gathers diverse AI viewpoints. Offer thoughtful, well-reasoned answers that complement other assistants, and respect the guidance and context below."
+
+        return ([header] + sections).joined(separator: "\n\n")
     }
 
     // MARK: - Helpers
@@ -398,6 +637,7 @@ class ChatViewModel: ObservableObject {
 
     private func selectFirstAvailableResponseIfNeeded() {
         guard !hasAutoSelectedFirstReadyResponse else { return }
+        guard !userManuallySelectedTab else { return }
 
         if !responses.indices.contains(selectedTab) {
             if let firstReady = responses.firstIndex(where: { $0.response != placeholderText || $0.hasError }) {
@@ -573,6 +813,8 @@ class ChatViewModel: ObservableObject {
         hasAutoSelectedFirstReadyResponse = false
         conversationHistory = [:]
         globalError = nil
+        pendingCompletionBadges.removeAll()
+        userManuallySelectedTab = false
     }
 
     var canSubmit: Bool {
@@ -621,13 +863,11 @@ class ChatViewModel: ObservableObject {
             )
         }
 
-        let conversation: Conversation
         if let existing = activeConversation {
             existing.prompt = displayedPrompt
             existing.totalLatency = totalLatency
             existing.responses = savedResponses
             existing.conversationHistory = savedMessages
-            conversation = existing
         } else {
             let newConversation = Conversation(
                 prompt: displayedPrompt,
@@ -637,7 +877,6 @@ class ChatViewModel: ObservableObject {
             )
             modelContext.insert(newConversation)
             activeConversation = newConversation
-            conversation = newConversation
         }
 
         do {
@@ -651,6 +890,10 @@ class ChatViewModel: ObservableObject {
     func loadConversation(_ conversation: Conversation) {
         isRestoringConversation = true
         defer { isRestoringConversation = false }
+
+        pendingCompletionBadges.removeAll()
+        userManuallySelectedTab = false
+        clearScheduledBadgeRemovals()
 
         let savedResponses = conversation.responses.map { $0.toModelResponse() }
         let responseModels = savedResponses.map { $0.model }
@@ -709,6 +952,11 @@ class ChatViewModel: ObservableObject {
         conversationHistory = [:]
         activeConversation = nil
         globalError = nil
+        pendingCompletionBadges.removeAll()
+        userManuallySelectedTab = false
+        searchResults = []
+        lastSearchContext = nil
+        lastSearchQuery = nil
 
         // Clear cache
         lastPrompt = ""
@@ -718,7 +966,7 @@ class ChatViewModel: ObservableObject {
 
     // MARK: - Follow-up Messages
 
-    func sendFollowUpMessage(to modelId: String, message: String) async {
+    func sendFollowUpMessage(to modelId: String, message: String, contextOverride: RequestContext? = nil) async {
         let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             return
@@ -727,6 +975,8 @@ class ChatViewModel: ObservableObject {
         if conversationHistory[modelId] == nil {
             conversationHistory[modelId] = []
         }
+
+        pendingCompletionBadges.remove(modelId)
 
         var historyForRequest = conversationHistory[modelId] ?? []
         historyForRequest.append(Message(role: "user", content: trimmed))
@@ -747,6 +997,13 @@ class ChatViewModel: ObservableObject {
             )
         }
 
+        let context: RequestContext
+        if let override = contextOverride {
+            context = override
+        } else {
+            context = await prepareContext(for: trimmed)
+        }
+
         do {
             let newResponse: ModelResponse
 
@@ -758,7 +1015,8 @@ class ChatViewModel: ObservableObject {
                     prompt: trimmed,
                     temperature: 0.7,
                     maxTokens: 512,
-                    conversationHistory: history
+                    conversationHistory: history,
+                    systemPrompt: context.systemPrompt
                 )
             } else {
                 // Use API service for cloud models
@@ -773,7 +1031,9 @@ class ChatViewModel: ObservableObject {
                     maxTokens: maxTokens,
                     topP: topP,
                     conversationHistory: historyForModel.isEmpty ? nil : historyForModel,
-                    apiOverrides: overrides.isEmpty ? nil : overrides
+                    apiOverrides: overrides.isEmpty ? nil : overrides,
+                    conversationGuide: context.conversationGuide,
+                    searchContext: context.searchPayload
                 )
 
                 let result = try await apiService.sendChatRequest(request)
@@ -790,6 +1050,17 @@ class ChatViewModel: ObservableObject {
 
             // Update conversation history
             replacePendingAssistantMessage(for: modelId, with: newResponse.error == nil ? newResponse.response : newResponse.userFriendlyError)
+
+            let currentSelectedModelId = responses.indices.contains(selectedTab) ? responses[selectedTab].model : nil
+            cancelBadgeRemoval(for: modelId)
+            if let selectedModel = currentSelectedModelId,
+               selectedModel != modelId,
+               userManuallySelectedTab {
+                pendingCompletionBadges.insert(modelId)
+                scheduleBadgeRemoval(for: modelId)
+            } else {
+                pendingCompletionBadges.remove(modelId)
+            }
 
             // Haptic feedback
             let generator = UINotificationFeedbackGenerator()
@@ -817,6 +1088,11 @@ class ChatViewModel: ObservableObject {
                 globalError = banner
             }
 
+            if userManuallySelectedTab {
+                pendingCompletionBadges.insert(modelId)
+                scheduleBadgeRemoval(for: modelId)
+            }
+
             let generator = UINotificationFeedbackGenerator()
             generator.notificationOccurred(.error)
 
@@ -836,12 +1112,45 @@ class ChatViewModel: ObservableObject {
             response.model != excludedModelId
         }
 
+        guard !targetResponses.isEmpty else { return }
+
+        let context = await prepareContext(for: trimmed)
+
         await withTaskGroup(of: Void.self) { group in
             for response in targetResponses {
                 group.addTask {
-                    await self.sendFollowUpMessage(to: response.model, message: trimmed)
+                    await self.sendFollowUpMessage(
+                        to: response.model,
+                        message: trimmed,
+                        contextOverride: context
+                    )
                 }
             }
         }
+    }
+
+    func indexForModel(_ modelId: String) -> Int? {
+        responses.firstIndex(where: { $0.model == modelId })
+    }
+
+    private func scheduleBadgeRemoval(for modelId: String) {
+        badgeRemovalWorkItems[modelId]?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.pendingCompletionBadges.remove(modelId)
+            self.badgeRemovalWorkItems[modelId] = nil
+        }
+        badgeRemovalWorkItems[modelId] = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: workItem)
+    }
+
+    private func cancelBadgeRemoval(for modelId: String) {
+        badgeRemovalWorkItems[modelId]?.cancel()
+        badgeRemovalWorkItems[modelId] = nil
+    }
+
+    private func clearScheduledBadgeRemovals() {
+        badgeRemovalWorkItems.values.forEach { $0.cancel() }
+        badgeRemovalWorkItems.removeAll()
     }
 }

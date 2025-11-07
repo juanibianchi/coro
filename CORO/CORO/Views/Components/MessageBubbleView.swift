@@ -20,39 +20,39 @@ struct MessageBubbleView: View {
                     Text(message.content)
                         .font(AppTheme.Typography.body)
                         .foregroundColor(AppTheme.Colors.textPrimary)
-                        .lineSpacing(4)
-                        .padding(14)
+                        .lineSpacing(6)
+                        .padding(16)
                         .background(
                             AppTheme.Gradients.accent.opacity(0.15)
                         )
-                        .cornerRadius(16)
+                        .cornerRadius(18)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 16)
+                            RoundedRectangle(cornerRadius: 18)
                                 .strokeBorder(AppTheme.Colors.accent.opacity(0.35), lineWidth: 1)
                         )
                 } else if message.isPendingAssistant {
                     HStack(spacing: 10) {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: AppTheme.Colors.accent))
-                        Text("Assistant is thinking…")
+                        Text("Thinking…")
                             .font(AppTheme.Typography.body)
                             .foregroundColor(AppTheme.Colors.textSecondary)
                     }
-                    .padding(14)
+                    .padding(16)
                     .background(AppTheme.Colors.surfaceElevated)
-                    .cornerRadius(16)
+                    .cornerRadius(18)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 16)
+                        RoundedRectangle(cornerRadius: 18)
                             .strokeBorder(AppTheme.Colors.outline.opacity(0.2), lineWidth: 1)
                     )
                 } else {
-                    MarkdownText(message.content)
-                        .padding(14)
+                    MarkdownText(message.content, fontSize: 16, lineSpacing: 10)
+                        .padding(18)
                         .background(AppTheme.Colors.surfaceElevated)
-                        .cornerRadius(16)
+                        .cornerRadius(18)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .strokeBorder(AppTheme.Colors.outline.opacity(0.4), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 18)
+                                .strokeBorder(AppTheme.Colors.outline.opacity(0.25), lineWidth: 1)
                         )
                 }
             }

@@ -195,6 +195,11 @@ class APIService: ObservableObject {
         static let deviceIdentifier = "coro.deviceIdentifier"
     }
 
+    private enum UserDefaultsKeys {
+        static let conversationGuide = "coro.conversationGuide"
+        static let searchEnabled = "coro.searchEnabledByDefault"
+    }
+
     @Published var baseURL: String {
         didSet {
             UserDefaults.standard.set(baseURL, forKey: "apiEndpoint")
@@ -221,6 +226,18 @@ class APIService: ObservableObject {
             } else {
                 try? KeychainService.set(nil, for: KeychainKeys.modelAPIKeys)
             }
+        }
+    }
+
+    @Published var conversationGuide: String {
+        didSet {
+            UserDefaults.standard.set(conversationGuide, forKey: UserDefaultsKeys.conversationGuide)
+        }
+    }
+
+    @Published var searchEnabledByDefault: Bool {
+        didSet {
+            UserDefaults.standard.set(searchEnabledByDefault, forKey: UserDefaultsKeys.searchEnabled)
         }
     }
 
@@ -265,6 +282,9 @@ class APIService: ObservableObject {
             try? KeychainService.set(newIdentifier, for: KeychainKeys.deviceIdentifier)
         }
 
+        conversationGuide = UserDefaults.standard.string(forKey: UserDefaultsKeys.conversationGuide) ?? ""
+        searchEnabledByDefault = UserDefaults.standard.object(forKey: UserDefaultsKeys.searchEnabled) as? Bool ?? false
+
         hasPremiumAccess = false
 
         let storedSession: String?
@@ -274,8 +294,6 @@ class APIService: ObservableObject {
             storedSession = nil
         }
         sessionToken = storedSession
-
-        hasPremiumAccess = sessionToken?.isEmpty == false
     }
 
     // MARK: - Public Mutations
@@ -308,7 +326,9 @@ class APIService: ObservableObject {
             maxTokens: request.maxTokens,
             topP: request.topP,
             conversationHistory: request.conversationHistory,
-            apiOverrides: overrides
+            apiOverrides: overrides,
+            conversationGuide: request.conversationGuide,
+            searchContext: request.searchContext
         )
 
         do {
@@ -426,6 +446,98 @@ class APIService: ObservableObject {
         }
 
         return signedIn
+    }
+
+    // MARK: - Search
+
+    struct SearchResult: Codable, Identifiable, Equatable {
+        let id: UUID
+        let title: String
+        let snippet: String
+        let url: String
+
+        init(id: UUID = UUID(), title: String, snippet: String, url: String) {
+            self.id = id
+            self.title = title
+            self.snippet = snippet
+            self.url = url
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case title, snippet, url
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            let title = try container.decode(String.self, forKey: .title)
+            let snippet = try container.decode(String.self, forKey: .snippet)
+            let url = try container.decode(String.self, forKey: .url)
+            self.init(title: title, snippet: snippet, url: url)
+        }
+    }
+
+    private struct SearchResponse: Codable {
+        let query: String
+        let results: [SearchResult]
+    }
+
+    @MainActor
+    func updateConversationGuide(_ guide: String) {
+        conversationGuide = guide
+    }
+
+    @MainActor
+    func updateSearchDefault(_ enabled: Bool) {
+        searchEnabledByDefault = enabled
+    }
+
+    func performSearch(query: String) async throws -> [SearchResult] {
+        guard let url = URL(string: "\(baseURL)/search"), !query.isEmpty else {
+            return []
+        }
+
+        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        components?.queryItems = [URLQueryItem(name: "q", value: query)]
+
+        guard let finalURL = components?.url else {
+            throw APIError.invalidURL
+        }
+
+        var urlRequest = URLRequest(url: finalURL)
+        applyAuthHeaders(to: &urlRequest)
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: urlRequest)
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw APIError.invalidResponse
+            }
+
+            guard httpResponse.statusCode == 200 else {
+                if let envelope = try? jsonDecoder.decode(ServerErrorEnvelope.self, from: data) {
+                    let message = envelope.detail.message ?? HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode)
+                    throw APIError.serverError(
+                        message: message,
+                        code: envelope.detail.errorCode,
+                        statusCode: httpResponse.statusCode,
+                        retryAfter: envelope.detail.retryAfter
+                    )
+                }
+
+                throw APIError.serverError(
+                    message: HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode),
+                    code: nil,
+                    statusCode: httpResponse.statusCode,
+                    retryAfter: nil
+                )
+            }
+
+            let searchResponse = try jsonDecoder.decode(SearchResponse.self, from: data)
+            return searchResponse.results
+        } catch let error as APIError {
+            throw error
+        } catch {
+            throw APIError.networkError(error)
+        }
     }
 
     // MARK: - Helpers

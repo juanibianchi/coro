@@ -20,6 +20,30 @@ extension Message {
     }
 }
 
+// MARK: - Search Context Models
+
+struct SearchContextPayload: Codable {
+    let query: String
+    let results: [SearchResultSnippet]
+
+    init(query: String, results: [SearchResultSnippet]) {
+        self.query = query
+        self.results = results
+    }
+}
+
+struct SearchResultSnippet: Codable {
+    let title: String
+    let snippet: String
+    let url: String
+
+    init(title: String, snippet: String, url: String) {
+        self.title = title
+        self.snippet = snippet
+        self.url = url
+    }
+}
+
 // MARK: - Request Models
 
 struct ChatRequest: Codable {
@@ -30,6 +54,8 @@ struct ChatRequest: Codable {
     let topP: Double?
     let conversationHistory: [String: [Message]]?
     let apiOverrides: [String: String]?
+    let conversationGuide: String?
+    let searchContext: SearchContextPayload?
 
     enum CodingKeys: String, CodingKey {
         case prompt, models, temperature
@@ -37,6 +63,8 @@ struct ChatRequest: Codable {
         case topP = "top_p"
         case conversationHistory = "conversation_history"
         case apiOverrides = "api_overrides"
+        case conversationGuide = "conversation_guide"
+        case searchContext = "search_context"
     }
 
     init(
@@ -46,7 +74,9 @@ struct ChatRequest: Codable {
         maxTokens: Int = 2000,
         topP: Double? = nil,
         conversationHistory: [String: [Message]]? = nil,
-        apiOverrides: [String: String]? = nil
+        apiOverrides: [String: String]? = nil,
+        conversationGuide: String? = nil,
+        searchContext: SearchContextPayload? = nil
     ) {
         self.prompt = prompt
         self.models = models
@@ -55,6 +85,8 @@ struct ChatRequest: Codable {
         self.topP = topP
         self.conversationHistory = conversationHistory
         self.apiOverrides = apiOverrides
+        self.conversationGuide = conversationGuide
+        self.searchContext = searchContext
     }
 }
 

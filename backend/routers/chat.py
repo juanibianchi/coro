@@ -14,12 +14,14 @@ from backend.models.schemas import (
     ModelResponse,
     ModelsResponse,
     ModelInfo,
-    HealthResponse
+    HealthResponse,
+    SearchContext,
 )
 from backend.config import config
 from backend.services.gemini_service import GeminiService
 from backend.services.groq_service import GroqService
 from backend.services.deepseek_service import DeepSeekService
+from backend.services.cerebras_service import cerebras_service
 from backend.models.error_codes import ErrorCode
 from backend.services.rate_limiter import enforce_rate_limit
 
@@ -127,6 +129,10 @@ async def chat(
         )
 
     override_keys = request.api_overrides or {}
+    system_prompt = _compose_system_prompt(
+        guide=request.conversation_guide,
+        search_context=request.search_context,
+    )
 
     # Create tasks for parallel execution
     tasks = []
@@ -143,7 +149,8 @@ async def chat(
             request.max_tokens,
             request.top_p,
             history,
-            override_keys.get(model_id)
+            override_keys.get(model_id),
+            system_prompt,
         )
         tasks.append(task)
 
@@ -208,6 +215,7 @@ async def _generate_for_model(
     top_p: Optional[float] = None,
     conversation_history: List = None,
     api_key_override: Optional[str] = None,
+    system_prompt: Optional[str] = None,
 ) -> ModelResponse:
     """
     Generate a response for a specific model.
@@ -235,6 +243,7 @@ async def _generate_for_model(
                 top_p,
                 conversation_history,
                 api_key_override=api_key_override,
+                system_prompt=system_prompt,
             )
 
         elif model_id in ["llama-70b", "llama-8b", "mixtral"]:
@@ -246,6 +255,7 @@ async def _generate_for_model(
                 top_p,
                 conversation_history,
                 api_key_override=api_key_override,
+                system_prompt=system_prompt,
             )
 
         elif model_id == "deepseek":
@@ -256,6 +266,19 @@ async def _generate_for_model(
                 top_p,
                 conversation_history,
                 api_key_override=api_key_override,
+                system_prompt=system_prompt,
+            )
+
+        elif model_id.startswith("cerebras-"):
+            return await cerebras_service.generate(
+                model_id,
+                config.MODELS[model_id]["model_name"],
+                prompt,
+                temperature,
+                max_tokens,
+                top_p,
+                conversation_history,
+                system_prompt=system_prompt,
             )
 
         else:
@@ -279,3 +302,53 @@ async def _generate_for_model(
             error=f"Unexpected error: {str(e)}",
             error_code=ErrorCode.INTERNAL_ERROR.value
         )
+
+
+def _compose_system_prompt(
+    *,
+    guide: Optional[str],
+    search_context: Optional[SearchContext],
+) -> Optional[str]:
+    """
+    Merge optional guidance and search context into a single system prompt string.
+
+    The resulting prompt encourages complementary perspectives and provides the
+    assistant with structured context (and citation hints) when available.
+    """
+    sections: List[str] = []
+
+    if guide:
+        cleaned = guide.strip()
+        if cleaned:
+            sections.append("Conversation Guide:\n" + cleaned)
+
+    if search_context and search_context.results:
+        query = (search_context.query or "").strip()
+        summary_lines: List[str] = []
+        for idx, result in enumerate(search_context.results, start=1):
+            title = result.title.strip()
+            snippet = result.snippet.strip()
+            url = result.url.strip()
+            summary_lines.append(
+                f"[S{idx}] {title}\n"
+                f"{snippet}\n"
+                f"Source: {url}"
+            )
+
+        if summary_lines:
+            search_header = f"Web Search Findings for \"{query}\":\n" if query else "Web Search Findings:\n"
+            sections.append(
+                search_header
+                + "\n\n".join(summary_lines)
+                + "\n\nWhen referencing these sources, cite them inline as [S1], [S2], etc."
+            )
+
+    if not sections:
+        return None
+
+    header = (
+        "You are contributing one perspective within CORO, an app that gathers diverse AI viewpoints. "
+        "Offer thoughtful, well-reasoned answers that complement other assistants, and respect the guidance and context below."
+    )
+
+    return header + "\n\n" + "\n\n".join(sections)

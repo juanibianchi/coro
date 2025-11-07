@@ -46,6 +46,14 @@ class Config:
     APPLE_CLIENT_ID: Optional[str] = os.getenv("APPLE_CLIENT_ID")
     APPLE_SKIP_VERIFICATION: bool = os.getenv("APPLE_SKIP_VERIFICATION", "false").lower() == "true"
 
+    # Search integration (Tavily)
+    TAVILY_API_KEY: Optional[str] = os.getenv("TAVILY_API_KEY")
+    TAVILY_ENDPOINT: str = os.getenv("TAVILY_ENDPOINT", "https://api.tavily.com/search")
+
+    # Cerebras inference
+    CEREBRAS_API_KEY: Optional[str] = os.getenv("CEREBRAS_API_KEY")
+    CEREBRAS_API_URL: str = os.getenv("CEREBRAS_API_URL", "https://api.cerebras.ai/v1/chat/completions")
+
     # Model Configuration
     MODELS = {
         "gemini": {
@@ -75,6 +83,34 @@ class Config:
             "provider": "Groq",
             "cost": "free",
             "model_name": "meta-llama/llama-4-maverick-17b-128e-instruct"
+        },
+        "cerebras-llama-3.1-8b": {
+            "id": "cerebras-llama-3.1-8b",
+            "name": "Cerebras Llama 3.1 8B",
+            "provider": "Cerebras",
+            "cost": "fast",
+            "model_name": "llama3.1-8b"
+        },
+        "cerebras-llama-3.3-70b": {
+            "id": "cerebras-llama-3.3-70b",
+            "name": "Cerebras Llama 3.3 70B",
+            "provider": "Cerebras",
+            "cost": "fast",
+            "model_name": "llama-3.3-70b"
+        },
+        "cerebras-gpt-oss-120b": {
+            "id": "cerebras-gpt-oss-120b",
+            "name": "Cerebras GPT-OSS 120B",
+            "provider": "Cerebras",
+            "cost": "fast",
+            "model_name": "gpt-oss-120b"
+        },
+        "cerebras-qwen-3-32b": {
+            "id": "cerebras-qwen-3-32b",
+            "name": "Cerebras Qwen 3 32B",
+            "provider": "Cerebras",
+            "cost": "fast",
+            "model_name": "qwen-3-32b"
         },
         "deepseek": {
             "id": "deepseek",

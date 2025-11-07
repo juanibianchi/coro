@@ -18,7 +18,7 @@ struct SidebarView: View {
                 // Header with New Chat button
                 VStack(spacing: 16) {
                     HStack {
-                        Text("CORO")
+                        Text("Coro")
                             .font(AppTheme.Typography.title)
                             .foregroundStyle(AppTheme.Gradients.accent)
 

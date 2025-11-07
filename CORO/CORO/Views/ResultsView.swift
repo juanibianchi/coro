@@ -4,12 +4,31 @@ struct ResultsView: View {
     @ObservedObject var viewModel: ChatViewModel
     let onClose: () -> Void
     let onOpenSettings: () -> Void
+
+    init(
+        viewModel: ChatViewModel,
+        onClose: @escaping () -> Void = {},
+        onOpenSettings: @escaping () -> Void = {}
+    ) {
+        self.viewModel = viewModel
+        self.onClose = onClose
+        self.onOpenSettings = onOpenSettings
+    }
     @State private var showingCopyConfirmation = false
     @State private var showingShareSheet = false
     @State private var isPromptExpanded = false
     @State private var showingSidebar = false
     @State private var followUpMessage: String = ""
     @FocusState private var isInputFocused: Bool
+
+    private var conversationGuideText: String? {
+        let guide = viewModel.apiService.conversationGuide.trimmingCharacters(in: .whitespacesAndNewlines)
+        return guide.isEmpty ? nil : guide
+    }
+
+    private var surfacedSearchResults: [APIService.SearchResult] {
+        Array(viewModel.searchResults.prefix(3))
+    }
 
     var body: some View {
         ZStack {
@@ -41,14 +60,12 @@ struct ResultsView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button {
-                    showingSidebar = false
-                    onClose()
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "chevron.backward")
-                        Text("Home")
-                            .font(AppTheme.Typography.caption.weight(.semibold))
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        showingSidebar.toggle()
                     }
+                } label: {
+                    Image(systemName: "line.3.horizontal")
+                        .font(.title3)
                 }
                 .foregroundColor(AppTheme.Colors.accent)
             }
@@ -64,12 +81,6 @@ struct ResultsView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     Button {
-                        showingSidebar = true
-                    } label: {
-                        Label("History", systemImage: "clock.arrow.circlepath")
-                    }
-
-                    Button {
                         viewModel.copyAllResponses()
                     } label: {
                         Label("Copy All Responses", systemImage: "doc.on.doc")
@@ -78,7 +89,7 @@ struct ResultsView: View {
                     Button {
                         onOpenSettings()
                     } label: {
-                        Label("Open Settings", systemImage: "gearshape")
+                        Label("Settings", systemImage: "gearshape")
                     }
 
                     Button(role: .destructive) {
@@ -117,11 +128,12 @@ struct ResultsView: View {
     }
 
     private var headerSection: some View {
-        VStack(spacing: 16) {
-            promptCard
-            statsRow
-        }
-        .background(AppTheme.Colors.surface.opacity(0.95))
+            VStack(spacing: 16) {
+                promptCard
+                contextSection
+                statsRow
+            }
+            .background(AppTheme.Colors.background)
     }
 
     private var promptCard: some View {
@@ -155,14 +167,72 @@ struct ResultsView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 14)
-                .fill(AppTheme.Colors.surfaceElevated)
+                .fill(AppTheme.Colors.surface)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14)
-                .strokeBorder(AppTheme.Colors.outline.opacity(0.4), lineWidth: 1)
+                .strokeBorder(AppTheme.Colors.outline.opacity(0.35), lineWidth: 1)
         )
         .padding(.horizontal, 20)
         .padding(.top, 16)
+    }
+
+    @ViewBuilder
+    private var contextSection: some View {
+        let guide = conversationGuideText
+        let results = surfacedSearchResults
+
+        if guide != nil || !results.isEmpty {
+            VStack(alignment: .leading, spacing: 14) {
+                if let guide {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("Custom Instructions", systemImage: "bookmark.fill")
+                            .font(AppTheme.Typography.caption.weight(.semibold))
+                            .foregroundColor(AppTheme.Colors.accent)
+
+                        Text(guide)
+                            .font(AppTheme.Typography.caption)
+                            .foregroundColor(AppTheme.Colors.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                if !results.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Label("Web Context", systemImage: "globe")
+                                .font(AppTheme.Typography.caption.weight(.semibold))
+                                .foregroundColor(AppTheme.Colors.accent)
+
+                            Spacer()
+
+                            if viewModel.searchResults.count > results.count {
+                                Text("Top \(results.count) of \(viewModel.searchResults.count)")
+                                    .font(AppTheme.Typography.caption)
+                                    .foregroundColor(AppTheme.Colors.textSecondary)
+                            }
+                        }
+
+                        VStack(spacing: 10) {
+                            ForEach(results) { result in
+                                SearchResultCard(result: result)
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(AppTheme.Colors.surfaceElevated)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .strokeBorder(AppTheme.Colors.outline.opacity(0.35), lineWidth: 1)
+            )
+            .padding(.horizontal, 20)
+        }
     }
 
     private var statsRow: some View {
@@ -197,14 +267,16 @@ struct ResultsView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(Array(viewModel.responses.enumerated()), id: \.element.id) { index, response in
+                    let showBadge = viewModel.pendingCompletionBadges.contains(response.model) && viewModel.selectedTab != index
                     TabButton(
                         modelName: viewModel.getModelName(response.model),
                         isSelected: viewModel.selectedTab == index,
                         hasError: response.hasError,
-                        color: viewModel.getModelColor(response.model)
+                        color: viewModel.getModelColor(response.model),
+                        showsCompletionBadge: showBadge
                     ) {
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                            viewModel.selectedTab = index
+                            viewModel.userSelectedTab(index)
                         }
                     }
                 }
@@ -244,22 +316,32 @@ struct ResultsView: View {
             followUpSection(for: response)
             actionBar(for: response)
         }
+        .overlay(alignment: .topTrailing) {
+            completionBadgesOverlay(excluding: response.model)
+                .padding(.trailing, 16)
+                .padding(.top, 12)
+        }
+        .overlay(alignment: .topTrailing) {
+            completionBadgesOverlay(excluding: response.model)
+                .padding(.trailing, 20)
+                .padding(.top, 16)
+        }
     }
 
     private func responseScroll(for response: ModelResponse, messages: [Message]) -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 20) {
                 if response.hasError && messages.isEmpty {
                     errorPlaceholder(for: response)
                 } else {
                     ForEach(messages) { message in
                         MessageBubbleView(message: message)
-                            .padding(.horizontal, 16)
+                            .padding(.horizontal, 20)
                     }
 
                     if response.hasError {
                         errorBanner(for: response)
-                            .padding(.horizontal, 16)
+                            .padding(.horizontal, 20)
                     }
                 }
             }
@@ -303,9 +385,9 @@ struct ResultsView: View {
 
                 Menu {
                     Button {
-                        broadcastFollowUp(message: followUpMessage, excluding: response.model)
+                        broadcastFollowUp(message: followUpMessage, currentModel: response.model)
                     } label: {
-                        Label("Ask every model", systemImage: "square.stack.3d.up.forward")
+                        Label("Send to all models", systemImage: "square.stack.3d.up.forward")
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
@@ -454,26 +536,28 @@ struct ResultsView: View {
     }
 
     private var sidebarOverlay: some View {
-        Group {
+        ZStack {
             if showingSidebar {
-                Color.black.opacity(0.3)
+                Color.black.opacity(0.28)
                     .ignoresSafeArea()
+                    .transition(.opacity)
                     .onTapGesture {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        withAnimation(.easeOut(duration: 0.25)) {
                             showingSidebar = false
                         }
                     }
-                    .overlay(
-                        HStack(spacing: 0) {
-                            SidebarView(viewModel: viewModel, isPresented: $showingSidebar)
-                                .frame(width: min(UIScreen.main.bounds.width * 0.85, 400))
-                                .transition(.move(edge: .leading))
 
-                            Spacer()
-                        }
-                    )
+                HStack(spacing: 0) {
+                    SidebarView(viewModel: viewModel, isPresented: $showingSidebar)
+                        .frame(width: min(UIScreen.main.bounds.width * 0.85, 400))
+                        .shadow(color: Color.black.opacity(0.18), radius: 16, x: 0, y: 8)
+                        .transition(.move(edge: .leading).combined(with: .opacity))
+
+                    Spacer()
+                }
             }
         }
+        .animation(.easeOut(duration: 0.25), value: showingSidebar)
     }
     private func sendFollowUp(to modelId: String) {
         let message = followUpMessage.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -489,7 +573,7 @@ struct ResultsView: View {
         }
     }
 
-    private func broadcastFollowUp(message: String, excluding excludedModel: String?) {
+    private func broadcastFollowUp(message: String, currentModel: String) {
         let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 
@@ -497,8 +581,84 @@ struct ResultsView: View {
         isInputFocused = false
 
         Task {
-            await viewModel.sendFollowUpToAllModels(message: trimmed, excluding: excludedModel)
+            await viewModel.sendFollowUpMessage(to: currentModel, message: trimmed)
+            await viewModel.sendFollowUpToAllModels(message: trimmed, excluding: currentModel)
         }
+    }
+
+    @ViewBuilder
+    private func completionBadgesOverlay(excluding modelId: String) -> some View {
+        let others = viewModel.pendingCompletionBadges.filter { $0 != modelId }
+        if !others.isEmpty {
+            VStack(alignment: .trailing, spacing: 8) {
+                ForEach(Array(others).sorted { viewModel.getModelName($0) < viewModel.getModelName($1) }.prefix(3), id: \.self) { model in
+                    Button {
+                        if let index = viewModel.indexForModel(model) {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                viewModel.userSelectedTab(index)
+                            }
+                        }
+                    } label: {
+                        Text("\(viewModel.getModelName(model)) ready")
+                            .font(AppTheme.Typography.caption.weight(.semibold))
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, 12)
+                            .background(AppTheme.Colors.surfaceElevated)
+                            .foregroundColor(AppTheme.Colors.accent)
+                            .clipShape(Capsule())
+                            .shadow(color: Color.black.opacity(0.12), radius: 8, x: 0, y: 4)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.trailing, 8)
+            .padding(.top, 8)
+            .allowsHitTesting(true)
+        }
+    }
+}
+
+private struct SearchResultCard: View {
+    let result: APIService.SearchResult
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let url = URL(string: result.url) {
+                Link(destination: url) {
+                    HStack(spacing: 8) {
+                        Text(result.title)
+                            .font(AppTheme.Typography.body.weight(.semibold))
+                            .foregroundColor(AppTheme.Colors.accent)
+                            .lineLimit(2)
+
+                        Spacer()
+
+                        Image(systemName: "arrow.up.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(AppTheme.Colors.accent)
+                    }
+                }
+                .buttonStyle(.plain)
+            } else {
+                Text(result.title)
+                    .font(AppTheme.Typography.body.weight(.semibold))
+                    .foregroundColor(AppTheme.Colors.textPrimary)
+                    .lineLimit(2)
+            }
+
+            Text(result.snippet)
+                .font(AppTheme.Typography.caption)
+                .foregroundColor(AppTheme.Colors.textSecondary)
+                .lineLimit(3)
+                .multilineTextAlignment(.leading)
+        }
+        .padding(14)
+        .background(AppTheme.Colors.surface.opacity(0.9))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(AppTheme.Colors.outline.opacity(0.25), lineWidth: 0.5)
+        )
     }
 }
 
@@ -519,7 +679,24 @@ struct TabButton: View {
     let isSelected: Bool
     let hasError: Bool
     let color: Color
+    let showsCompletionBadge: Bool
     let action: () -> Void
+
+    init(
+        modelName: String,
+        isSelected: Bool,
+        hasError: Bool,
+        color: Color,
+        showsCompletionBadge: Bool = false,
+        action: @escaping () -> Void
+    ) {
+        self.modelName = modelName
+        self.isSelected = isSelected
+        self.hasError = hasError
+        self.color = color
+        self.showsCompletionBadge = showsCompletionBadge
+        self.action = action
+    }
 
     var body: some View {
         Button(action: action) {
@@ -529,14 +706,14 @@ struct TabButton: View {
                         .fill(
                             hasError
                                 ? LinearGradient(colors: [AppTheme.Colors.warning, AppTheme.Colors.warning.opacity(0.8)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                                : LinearGradient(colors: isSelected ? [color, color.opacity(0.85)] : [AppTheme.Colors.outline.opacity(0.5), AppTheme.Colors.outline.opacity(0.2)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                                : LinearGradient(colors: isSelected ? [color, color.opacity(0.9)] : [AppTheme.Colors.outline.opacity(0.5), AppTheme.Colors.outline.opacity(0.2)], startPoint: .topLeading, endPoint: .bottomTrailing)
                         )
                         .frame(width: 8, height: 8)
                         .shadow(color: isSelected ? color.opacity(0.4) : Color.clear, radius: 3, x: 0, y: 1)
 
                     Text(modelName)
-                        .font(AppTheme.Typography.caption)
-                        .foregroundColor(isSelected ? AppTheme.Colors.textPrimary : AppTheme.Colors.textSecondary)
+                        .font(AppTheme.Typography.caption.weight(isSelected ? .semibold : .regular))
+                        .foregroundColor(isSelected ? AppTheme.Colors.accent : AppTheme.Colors.textSecondary)
                 }
 
                 // Underline indicator
@@ -557,12 +734,12 @@ struct TabButton: View {
                 Group {
                     if isSelected {
                         RoundedRectangle(cornerRadius: 14)
-                            .fill(AppTheme.Colors.surfaceElevated)
+                            .fill(color.opacity(0.20))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 14)
-                                    .strokeBorder(color.opacity(0.5), lineWidth: 1)
+                                    .strokeBorder(color.opacity(0.65), lineWidth: 1.5)
                             )
-                            .shadow(color: color.opacity(0.25), radius: 8, x: 0, y: 4)
+                            .shadow(color: color.opacity(0.35), radius: 8, x: 0, y: 4)
                     } else {
                         RoundedRectangle(cornerRadius: 14)
                             .fill(Color.clear)
@@ -571,5 +748,13 @@ struct TabButton: View {
             )
         }
         .buttonStyle(PlainButtonStyle())
+        .overlay(alignment: .topTrailing) {
+            if showsCompletionBadge {
+                Circle()
+                    .fill(AppTheme.Colors.accent)
+                    .frame(width: 8, height: 8)
+                    .offset(x: 10, y: -10)
+            }
+        }
     }
 }

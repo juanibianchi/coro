@@ -47,7 +47,7 @@ struct ContentView: View {
 
                             ToolbarItem(placement: .principal) {
                                 if !showingSidebar {
-                                    Text("CORO")
+                                    Text("Coro")
                                         .font(AppTheme.Typography.title)
                                         .foregroundStyle(AppTheme.Gradients.accent)
                                 }
@@ -114,6 +114,25 @@ struct InputView: View {
     let onShowSettings: () -> Void
     @FocusState private var isPromptFocused: Bool
 
+    private var conversationGuideText: String? {
+        let raw = viewModel.apiService.conversationGuide.trimmingCharacters(in: .whitespacesAndNewlines)
+        return raw.isEmpty ? nil : raw
+    }
+
+    private var guideSummary: String? {
+        guard let guide = conversationGuideText else { return nil }
+        let firstLine = guide.components(separatedBy: .newlines).first ?? guide
+        if firstLine.count > 80 {
+            let trimmed = firstLine.prefix(80)
+            return trimmed.trimmingCharacters(in: .whitespacesAndNewlines) + "…"
+        }
+        return firstLine
+    }
+
+    private var shouldShowContextChips: Bool {
+        conversationGuideText != nil || viewModel.isSearchEnabled
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             if let error = viewModel.globalError {
@@ -132,48 +151,73 @@ struct InputView: View {
             }
 
             ScrollView {
-                VStack(spacing: 40) {
-                    // Spacer for top
+                VStack(spacing: 36) {
                     Spacer()
-                        .frame(height: 20)
+                        .frame(height: 4)
+
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 36, style: .continuous)
+                            .fill(AppTheme.Colors.surface)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 36, style: .continuous)
+                                    .stroke(AppTheme.Colors.outline.opacity(0.3), lineWidth: 0.5)
+                            )
+                            .shadow(color: Color.black.opacity(0.35), radius: 24, x: 0, y: 16)
+                        Image("CoroLogo")
+                            .resizable()
+                            .scaledToFit()
+                            .padding(16)
+                    }
+                    .frame(width: 120, height: 120)
+                    .clipShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
+                    .padding(.horizontal, 24)
 
                     // Prompt Input
-                    VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 20) {
                         Text("What would you like to ask?")
                             .font(AppTheme.Typography.hero)
-                            .foregroundColor(AppTheme.Colors.textPrimary)
+                            .foregroundColor(AppTheme.Colors.textPrimary.opacity(0.96))
 
                         ZStack(alignment: .topLeading) {
-                            // Placeholder
                             if viewModel.prompt.isEmpty && !isPromptFocused {
-                                Text("Try asking about anything...")
-                                    .foregroundColor(AppTheme.Colors.textSecondary.opacity(0.5))
-                                    .padding(.horizontal, 6)
+                                Text("Try asking about anything…")
+                                    .foregroundColor(AppTheme.Colors.textSecondary.opacity(0.85))
+                                    .padding(.horizontal, 8)
                                     .padding(.top, 12)
                             }
 
-                            // Text Editor
                             TextEditor(text: $viewModel.prompt)
                                 .focused($isPromptFocused)
-                                .frame(minHeight: 140)
+                                .frame(minHeight: 150)
                                 .scrollContentBackground(.hidden)
+                                .foregroundColor(AppTheme.Colors.textPrimary)
                                 .background(Color.clear)
                         }
-                        .padding(16)
+                        .padding(18)
                         .background(
-                            RoundedRectangle(cornerRadius: 20)
+                            RoundedRectangle(cornerRadius: 24)
                                 .fill(AppTheme.Colors.surface)
                         )
                         .overlay(
-                            RoundedRectangle(cornerRadius: 20)
+                            RoundedRectangle(cornerRadius: 24)
                                 .strokeBorder(
-                                    isPromptFocused ? AppTheme.Colors.accent.opacity(0.4) : AppTheme.Colors.outline.opacity(0.6),
+                                    isPromptFocused ? AppTheme.Colors.accent.opacity(0.6) : AppTheme.Colors.outline.opacity(0.65),
                                     lineWidth: 1.5
                                 )
                         )
-                        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 8)
                     }
-                    .padding(.horizontal, 24)
+                    .padding(.horizontal, 22)
+                    .padding(.vertical, 20)
+                    .background(
+                        RoundedRectangle(cornerRadius: 32)
+                            .fill(AppTheme.Colors.surfaceElevated)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 32)
+                            .stroke(AppTheme.Colors.outline.opacity(0.35), lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(0.22), radius: 22, x: 0, y: 12)
+                    .padding(.horizontal, 18)
 
                     // Model Selection
                     VStack(alignment: .leading, spacing: 16) {
@@ -191,6 +235,30 @@ struct InputView: View {
                         .padding(.horizontal, 24)
 
                         ModelSelectorView(viewModel: viewModel)
+
+                        if shouldShowContextChips {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 12) {
+                                    if let summary = guideSummary {
+                                        ContextChip(
+                                            icon: "bookmark.fill",
+                                            title: "Instructions active",
+                                            subtitle: summary
+                                        )
+                                    }
+
+                                    if viewModel.isSearchEnabled {
+                                        ContextChip(
+                                            icon: viewModel.isSearching ? "hourglass" : "globe",
+                                            title: viewModel.isSearching ? "Gathering context…" : "Web search on",
+                                            subtitle: viewModel.isSearching ? "Fetching latest sources" : "New prompts include web results"
+                                        )
+                                    }
+                                }
+                                .padding(.horizontal, 24)
+                            }
+                            .padding(.top, 6)
+                        }
 
                         Button {
                             onShowParameters()
@@ -274,6 +342,11 @@ struct InputView: View {
                         .frame(height: 40)
                 }
                 .padding(.bottom, 120)
+                .padding(.top, 16)
+            }
+            .background(AppTheme.Colors.background)
+            .safeAreaInset(edge: .top) {
+                Color.clear.frame(height: 16)
             }
 
             // Ask Button (Fixed at bottom)
@@ -314,8 +387,11 @@ struct InputView: View {
                 .disabled(!viewModel.canSubmit || viewModel.viewState == .loading)
                 .padding(.horizontal, 24)
                 .padding(.top, 20)
-                .padding(.bottom, 30)
-                .background(AppTheme.Colors.surface.opacity(0.9))
+                .padding(.bottom, 24)
+                .background(
+                    LinearGradient(colors: [AppTheme.Colors.surface.opacity(0.98), AppTheme.Colors.surface.opacity(0.6)], startPoint: .top, endPoint: .bottom)
+                        .ignoresSafeArea(edges: .bottom)
+                )
             }
         }
     }
@@ -340,16 +416,16 @@ private struct UpsellCard: View {
     let action: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 14) {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 12) {
                 Image(systemName: icon)
                     .font(.title3.weight(.semibold))
-                    .foregroundStyle(AppTheme.Gradients.accent)
-                    .frame(width: 40, height: 40)
-                    .background(AppTheme.Colors.surfaceElevated.opacity(0.6))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .foregroundColor(.white)
+                    .frame(width: 44, height: 44)
+                    .background(AppTheme.Gradients.accent)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .font(AppTheme.Typography.subtitle)
                         .foregroundColor(AppTheme.Colors.textPrimary)
@@ -362,33 +438,64 @@ private struct UpsellCard: View {
 
             Button(action: action) {
                 HStack {
-                    Spacer()
                     Text(actionTitle)
                         .font(AppTheme.Typography.caption.weight(.semibold))
+                    Spacer()
                     Image(systemName: "chevron.right")
                         .font(.caption.weight(.semibold))
                 }
-                .padding(.vertical, 10)
+                .padding(.vertical, 12)
                 .padding(.horizontal, 16)
-                .background(AppTheme.Colors.surfaceElevated)
+                .background(AppTheme.Colors.accent.opacity(0.15))
                 .foregroundColor(AppTheme.Colors.accent)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(AppTheme.Colors.accent.opacity(0.35), lineWidth: 1)
-                )
+                .clipShape(RoundedRectangle(cornerRadius: 14))
             }
         }
-        .padding(20)
+        .padding(22)
         .background(
-            RoundedRectangle(cornerRadius: 22)
-                .fill(AppTheme.Colors.surface.opacity(0.94))
+            RoundedRectangle(cornerRadius: 28)
+                .fill(AppTheme.Colors.surface)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 22)
+            RoundedRectangle(cornerRadius: 28)
                 .stroke(AppTheme.Colors.outline.opacity(0.25), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
+        .shadow(color: Color.black.opacity(0.18), radius: 18, x: 0, y: 10)
+    }
+}
+
+private struct ContextChip: View {
+    let icon: String
+    let title: String
+    let subtitle: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(AppTheme.Colors.accent)
+                Text(title)
+                    .font(AppTheme.Typography.caption.weight(.semibold))
+                    .foregroundColor(AppTheme.Colors.textPrimary)
+            }
+
+            if let subtitle, !subtitle.isEmpty {
+                Text(subtitle)
+                    .font(AppTheme.Typography.caption)
+                    .foregroundColor(AppTheme.Colors.textSecondary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+            }
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 14)
+        .background(AppTheme.Colors.surfaceElevated.opacity(0.9))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(AppTheme.Colors.outline.opacity(0.3), lineWidth: 0.5)
+        )
     }
 }
 

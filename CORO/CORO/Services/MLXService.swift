@@ -24,7 +24,8 @@ class MLXService {
         prompt: String,
         temperature: Float = 0.7,
         maxTokens: Int = 512,
-        conversationHistory: [Message] = []
+        conversationHistory: [Message] = [],
+        systemPrompt: String? = nil
     ) async throws -> ModelResponse {
         let startTime = Date()
 
@@ -77,15 +78,25 @@ class MLXService {
             }
 
             // Build the full prompt including conversation history
-            var fullPrompt = ""
-            if !conversationHistory.isEmpty {
-                fullPrompt = formatConversationHistory(conversationHistory)
+            var promptSections: [String] = []
+
+            if let systemPrompt, !systemPrompt.isEmpty {
+                promptSections.append(systemPrompt)
             }
-            fullPrompt += prompt
+
+            let historyBlock = formatConversationHistory(conversationHistory).trimmingCharacters(in: .whitespacesAndNewlines)
+            if !historyBlock.isEmpty {
+                promptSections.append(historyBlock)
+            }
+
+            let currentPromptBlock = "User: \(prompt)\nAssistant:"
+            promptSections.append(currentPromptBlock)
+
+            let combinedPrompt = promptSections.joined(separator: "\n\n")
 
             // Generate response
             print("Generating response...")
-            let response = try await session.respond(to: fullPrompt)
+            let response = try await session.respond(to: combinedPrompt)
 
             let latencyMs = Int(Date().timeIntervalSince(startTime) * 1000)
 

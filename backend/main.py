@@ -6,7 +6,7 @@ FastAPI application for comparing responses from multiple AI models.
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.routers import chat, auth
+from backend.routers import chat, auth, search, orchestrator
 from backend.config import config
 from backend.services.rate_limiter import init_rate_limiter, shutdown_rate_limiter
 
@@ -41,6 +41,8 @@ app.add_middleware(
 # Include routers
 app.include_router(chat.router, tags=["chat"])
 app.include_router(auth.router, tags=["auth"])
+app.include_router(search.router, tags=["search"])
+app.include_router(orchestrator.router, tags=["orchestrator"])
 
 
 @app.on_event("startup")
